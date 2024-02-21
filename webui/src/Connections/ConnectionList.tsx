@@ -285,7 +285,7 @@ const ConnectionsTableRow = observer(function ConnectionsTableRow({
 	}
 
 	const openBugUrl = useCallback(() => {
-		const url = moduleInfo?.bugUrl
+		const url = moduleInfo?.baseInfo?.bugUrl
 		if (url) windowLinkOpen({ href: url })
 	}, [moduleInfo])
 
@@ -307,7 +307,7 @@ const ConnectionsTableRow = observer(function ConnectionsTableRow({
 			<td onClick={doEdit} className="hand">
 				{moduleInfo ? (
 					<>
-						{moduleInfo.isLegacy && (
+						{moduleInfo.selectedVersion.isLegacy && (
 							<>
 								<FontAwesomeIcon
 									icon={faExclamationTriangle}
@@ -316,10 +316,10 @@ const ConnectionsTableRow = observer(function ConnectionsTableRow({
 								/>{' '}
 							</>
 						)}
-						{moduleInfo.shortname ?? ''}
+						{moduleInfo.baseInfo.shortname ?? ''}
 
 						<br />
-						{moduleInfo.manufacturer ?? ''}
+						{moduleInfo.baseInfo.manufacturer ?? ''}
 					</>
 				) : (
 					connection.instance_type
@@ -351,7 +351,7 @@ const ConnectionsTableRow = observer(function ConnectionsTableRow({
 										onMouseDown={doShowHelp}
 										color="secondary"
 										title="Help"
-										disabled={!moduleInfo?.hasHelp}
+										disabled={!moduleInfo?.baseInfo?.hasHelp}
 										style={{ textAlign: 'left' }}
 									>
 										<Tuck>
@@ -364,7 +364,7 @@ const ConnectionsTableRow = observer(function ConnectionsTableRow({
 										onMouseDown={openBugUrl}
 										color="secondary"
 										title="Issue Tracker"
-										disabled={!moduleInfo?.bugUrl}
+										disabled={!moduleInfo?.baseInfo?.bugUrl}
 										style={{ textAlign: 'left' }}
 									>
 										<Tuck>
