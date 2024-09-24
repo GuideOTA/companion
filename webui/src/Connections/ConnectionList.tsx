@@ -26,6 +26,7 @@ import { observer } from 'mobx-react-lite'
 import { NonIdealState } from '../Components/NonIdealState.js'
 import { Tuck } from '../Components/Tuck.js'
 import { useTableVisibilityHelper, VisibilityButton } from '../Components/TableVisibility.js'
+import { NewClientModuleVersionInfo2 } from '@companion-app/shared/Model/ModuleInfo.js'
 
 interface VisibleConnectionsState {
 	disabled: boolean
@@ -289,6 +290,22 @@ const ConnectionsTableRow = observer(function ConnectionsTableRow({
 		if (url) windowLinkOpen({ href: url })
 	}, [moduleInfo])
 
+	let moduleVersion: NewClientModuleVersionInfo2 | null | undefined
+	switch (connection.moduleVersionMode) {
+		case 'stable':
+			moduleVersion = moduleInfo?.stableVersion
+			break
+		case 'prerelease':
+			moduleVersion = moduleInfo?.prereleaseVersion
+			break
+		case 'specific-version':
+			moduleVersion = moduleInfo?.releaseVersions.find((v) => v.version.id === connection.moduleVersionId)
+			break
+		case 'custom':
+			moduleVersion = moduleInfo?.customVersions.find((v) => v.version.id === connection.moduleVersionId)
+			break
+	}
+
 	return (
 		<tr
 			ref={ref}
@@ -307,7 +324,11 @@ const ConnectionsTableRow = observer(function ConnectionsTableRow({
 			<td onClick={doEdit} className="hand">
 				{moduleInfo ? (
 					<>
-						{moduleInfo.defaultVersion.isLegacy && (
+						{moduleInfo.baseInfo.shortname ?? ''}
+						<br />
+						{moduleInfo.baseInfo.manufacturer ?? ''}
+						<br />
+						{moduleVersion?.isLegacy && (
 							<>
 								<FontAwesomeIcon
 									icon={faExclamationTriangle}
@@ -316,10 +337,7 @@ const ConnectionsTableRow = observer(function ConnectionsTableRow({
 								/>{' '}
 							</>
 						)}
-						{moduleInfo.baseInfo.shortname ?? ''}
-
-						<br />
-						{moduleInfo.baseInfo.manufacturer ?? ''}
+						{moduleVersion?.displayName}
 					</>
 				) : (
 					connection.instance_type
