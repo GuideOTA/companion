@@ -11,9 +11,9 @@ import { RespawnMonitor } from '@companion-app/shared/Respawn.js'
 import type { Registry } from '../Registry.js'
 import type { InstanceStatus } from './Status.js'
 import type { ConnectionConfig } from '@companion-app/shared/Model/Connections.js'
-import type { NewModuleVersionInfo } from './Modules.js'
 import type { ConnectionConfigStore } from './ConnectionConfigStore.js'
 import { isModuleApiVersionCompatible } from '@companion-app/shared/ModuleApiVersionCheck.js'
+import { SomeModuleVersionInfo } from './Modules.js'
 
 /**
  * A backoff sleep strategy
@@ -337,7 +337,7 @@ export class ModuleHost {
 	async queueRestartConnection(
 		connectionId: string,
 		config: ConnectionConfig | undefined,
-		moduleInfo: NewModuleVersionInfo | undefined
+		moduleInfo: SomeModuleVersionInfo | undefined
 	): Promise<void> {
 		if (!config || !moduleInfo) return
 
