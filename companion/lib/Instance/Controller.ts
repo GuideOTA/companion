@@ -148,7 +148,11 @@ export class InstanceController extends CoreBase<InstanceControllerEvents> {
 		this.emit('connection_added')
 	}
 
-	async reloadUsesOfModule(moduleId: string, mode: 'release' | 'custom', versionId: string): Promise<void> {
+	async reloadUsesOfModule(
+		moduleId: string,
+		mode: 'release' | 'custom' | 'dev',
+		versionId: string | null
+	): Promise<void> {
 		// TODO - use the version!
 
 		// restart usages of this module

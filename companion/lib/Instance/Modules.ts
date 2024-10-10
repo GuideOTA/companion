@@ -379,27 +379,44 @@ export class InstanceModules {
 	async reloadExtraModule(fullpath: string): Promise<void> {
 		this.#logger.info(`Attempting to reload module in: ${fullpath}`)
 
-		// nocommit redo this
+		const reloadedModule = await this.#moduleScanner.loadInfoForModule(fullpath, true)
+		if (reloadedModule) {
+			this.#logger.info(
+				`Found new module "${reloadedModule.display.id}" v${reloadedModule.display.version} in: ${fullpath}`
+			)
 
-		// const reloadedModule = await this.#moduleScanner.loadInfoForModule(fullpath, true)
-		// if (reloadedModule) {
-		// 	this.#logger.info(
-		// 		`Found new module "${reloadedModule.display.id}" v${reloadedModule.display.version} in: ${fullpath}`
-		// 	)
+			// Replace any existing module
+			const moduleInfo = this.#getOrCreateModuleEntry(reloadedModule.manifest.id)
+			moduleInfo.devModule = {
+				...reloadedModule,
+				type: 'dev',
+			}
 
-		// 	// Replace any existing module
-		// 	this.#knownModules.set(reloadedModule.manifest.id, {
-		// 		...reloadedModule,
-		// 		isOverride: true,
-		// 	})
+			this.#emitModuleUpdate(reloadedModule.manifest.id)
 
-		// this.#emitModuleUpdate(reloadedModule.manifest.id)
+			// restart usages of this module
+			await this.#instanceController.reloadUsesOfModule(reloadedModule.manifest.id, 'dev', null)
+		} else {
+			this.#logger.info(`Failed to find module in: ${fullpath}`)
 
-		// 	// restart usages of this module
-		// 	await this.#instanceController.reloadUsesOfModule(reloadedModule.manifest.id)
-		// } else {
-		// 	this.#logger.info(`Failed to find module in: ${fullpath}`)
-		// }
+			let changedModuleId: string | undefined
+
+			// Find the dev module which shares this path, and remove it as an option
+			for (const moduleInfo of this.#knownModules.values()) {
+				if (moduleInfo.devModule?.basePath === fullpath) {
+					moduleInfo.devModule = null
+					changedModuleId = moduleInfo.id
+					break
+				}
+			}
+
+			if (changedModuleId) {
+				this.#emitModuleUpdate(changedModuleId)
+
+				// restart usages of this module
+				await this.#instanceController.reloadUsesOfModule(changedModuleId, 'dev', null)
+			}
+		}
 	}
 
 	#emitModuleUpdate = (changedModuleId: string): void => {
