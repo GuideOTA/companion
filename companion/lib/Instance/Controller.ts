@@ -95,7 +95,7 @@ export class InstanceController extends CoreBase<InstanceControllerEvents> {
 		this.status = new InstanceStatus(registry.io, registry.controls)
 		this.moduleHost = new ModuleHost(registry, this.status, this.#configStore)
 		this.modules = new InstanceModules(registry.io, registry.api_router, this, moduleDirs)
-		this.modulesStore = new ModuleStoreService(registry.io, registry.db)
+		this.modulesStore = new ModuleStoreService(registry.io, registry.data.cache)
 		this.userModulesManager = new InstanceInstalledModulesManager(
 			this.modules,
 			this.modulesStore,
@@ -148,11 +148,7 @@ export class InstanceController extends CoreBase<InstanceControllerEvents> {
 		this.emit('connection_added')
 	}
 
-	async reloadUsesOfModule(
-		moduleId: string,
-		mode: 'release' | 'custom' | 'dev',
-		versionId: string | null
-	): Promise<void> {
+	async reloadUsesOfModule(moduleId: string, mode: 'release' | 'custom', versionId: string): Promise<void> {
 		// TODO - use the version!
 
 		// restart usages of this module

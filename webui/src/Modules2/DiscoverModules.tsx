@@ -92,7 +92,11 @@ export const DiscoverModulesPanel = observer(function DiscoverModulesPanel({
 				<RefreshModulesList />
 				<p>
 					Last updated:&nbsp;
-					{moduleStoreCache ? (moduleStoreCache.lastUpdated === 0 ? 'Never' : moduleStoreCache.lastUpdated) : 'Unknown'}
+					{moduleStoreCache
+						? moduleStoreCache.lastUpdated === 0
+							? 'Never'
+							: new Date(moduleStoreCache.lastUpdated).toISOString()
+						: 'Unknown'}
 				</p>
 
 				<SearchBox filter={filter} setFilter={setFilter} />

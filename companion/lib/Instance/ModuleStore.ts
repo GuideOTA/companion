@@ -1,9 +1,12 @@
 import LogController from '../Log/Controller.js'
 import type { ClientSocket, UIHandler } from '../UI/Handler.js'
-import type { DataDatabase } from '../Data/Database.js'
 import type { ModuleStoreCacheStore, ModuleStoreCacheVersionEntry } from '@companion-app/shared/Model/ModulesStore.js'
+import type { DataCache } from '../Data/Cache.js'
 
 const ModuleStoreRoom = 'module-store-cache'
+
+const CacheStoreListKey = 'module_store_list'
+const CacheStoreModuleTable = 'module_store'
 
 const SUBSCRIBE_REFRESH_INTERVAL = 1000 * 60 * 60 * 6 // Update when a user subscribes to the data, if older than 6 hours
 
@@ -12,7 +15,7 @@ export class ModuleStoreService {
 
 	/**
 	 */
-	readonly #db: DataDatabase
+	readonly #cacheStore: DataCache
 
 	/**
 	 * The core interface client
@@ -23,11 +26,11 @@ export class ModuleStoreService {
 	 */
 	#store: ModuleStoreCacheStore
 
-	constructor(io: UIHandler, db: DataDatabase) {
+	constructor(io: UIHandler, cacheStore: DataCache) {
 		this.#io = io
-		this.#db = db
+		this.#cacheStore = cacheStore
 
-		this.#store = db.getKey('module-store-cache', {
+		this.#store = cacheStore.getKey(CacheStoreListKey, {
 			lastUpdated: 0,
 			modules: {},
 		} satisfies ModuleStoreCacheStore)
@@ -142,7 +145,7 @@ export class ModuleStoreService {
 				}
 			}
 
-			this.#db.setKey('module-store-cache', this.#store)
+			this.#cacheStore.setKey(CacheStoreListKey, this.#store)
 
 			this.#io.emitToRoom(ModuleStoreRoom, 'modules-store:data', this.#store)
 			this.#io.emit('modules-store:progress', 1)
