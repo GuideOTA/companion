@@ -1,19 +1,6 @@
-/** @deprecated */
-export interface ModuleStoreCacheVersionEntry {
-	id: string
-	isPrerelease: boolean
-	releasedAt: number // unix timestamp
-
-	tarUrl: string
-
-	// apiVersion: string // TODO
-
-	// TODO - more props
-}
-
 export interface ModuleStoreListCacheStore {
 	lastUpdated: number
-	// lastUpdateAttemp: number
+	// lastUpdateAttempt: number
 	// updateMessage: string|null
 	modules: Record<string, ModuleStoreListCacheEntry>
 }
@@ -35,6 +22,29 @@ export interface ModuleStoreListCacheEntry {
 
 	// Platform support?
 	// Has compatible version?
+
+	// TODO - more props
+}
+
+export interface ModuleStoreModuleInfoStore {
+	id: string
+
+	lastUpdated: number
+	// lastUpdateAttempt: number
+	// updateMessage: string|null
+
+	// TODO
+	versions: ModuleStoreModuleInfoVersion[]
+}
+export interface ModuleStoreModuleInfoVersion {
+	id: string
+	isPrerelease: boolean
+	releasedAt: number // unix timestamp
+
+	tarUrl: string | null
+	// deprecationReason: string | null
+
+	// apiVersion: string // TODO
 
 	// TODO - more props
 }

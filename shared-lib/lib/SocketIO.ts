@@ -44,7 +44,7 @@ import type { RecordSessionInfo, RecordSessionListInfo } from './Model/ActionRec
 import type { ActionDefinitionUpdate, ClientActionDefinition } from './Model/ActionDefinitionModel.js'
 import type { CloudControllerState, CloudRegionState } from './Model/Cloud.js'
 import type { ModuleInfoUpdate, ModuleVersionInfo, ModuleVersionMode, NewClientModuleInfo } from './Model/ModuleInfo.js'
-import type { ModuleStoreListCacheStore } from './Model/ModulesStore.js'
+import type { ModuleStoreListCacheStore, ModuleStoreModuleInfoStore } from './Model/ModulesStore.js'
 
 export interface ClientToBackendEventsMap {
 	disconnect: () => never // Hack because type is missing
@@ -328,9 +328,12 @@ export interface ClientToBackendEventsMap {
 	'modules:install-store-module': (moduleId: string, versionId: string) => string | null
 	'modules:uninstall-store-module': (moduleId: string, versionId: string) => string | null
 
-	'modules-store:subscribe': () => ModuleStoreListCacheStore
-	'modules-store:unsubscribe': () => void
-	'modules-store:refresh': () => void
+	'modules-store:list:subscribe': () => ModuleStoreListCacheStore
+	'modules-store:list:unsubscribe': () => void
+	'modules-store:list:refresh': () => void
+	'modules-store:info:subscribe': (moduleId: string) => ModuleStoreModuleInfoStore | null
+	'modules-store:info:unsubscribe': (moduleId: string) => void
+	'modules-store:info:refresh': (moduleId: string) => void
 
 	'variables:instance-values': (label: string) => CompanionVariableValues | undefined
 
@@ -388,8 +391,10 @@ export interface BackendToClientEventsMap {
 
 	'surfaces:discovery:update': (update: SurfacesDiscoveryUpdate) => void
 
-	'modules-store:data': (data: ModuleStoreListCacheStore) => void
-	'modules-store:progress': (percent: number) => void
+	'modules-store:list:data': (data: ModuleStoreListCacheStore) => void
+	'modules-store:list:progress': (percent: number) => void
+	'modules-store:info:data': (moduleId: string, data: ModuleStoreModuleInfoStore) => void
+	'modules-store:info:progress': (moduleId: string, percent: number) => void
 
 	'emulator:images': (newImages: EmulatorImage[] | EmulatorImageCache) => void
 	'emulator:config': (patch: JsonPatchOperation[] | EmulatorConfig) => void

@@ -13,7 +13,7 @@ export function RefreshModulesList() {
 	const [refreshError, setLoadError] = useState<string | null>(null) // TODO - show this error
 
 	const doRefreshModules = useCallback(() => {
-		socketEmitPromise(socket, 'modules-store:refresh', []).catch((err) => {
+		socketEmitPromise(socket, 'modules-store:list:refresh', []).catch((err) => {
 			console.error('Failed to refresh modules', err)
 		})
 	}, [socket])

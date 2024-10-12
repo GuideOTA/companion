@@ -6,12 +6,12 @@ import { faGithub } from '@fortawesome/free-brands-svg-icons'
 import { socketEmitPromise } from '../util.js'
 import { CAlert, CButton } from '@coreui/react'
 import { NonIdealState } from '../Components/NonIdealState.js'
-import { ModuleStoreCacheEntry, ModuleStoreCacheStore } from '@companion-app/shared/Model/ModulesStore.js'
 import { RefreshModulesList } from './RefreshModulesList.js'
 import { SearchBox } from '../Components/SearchBox.js'
 import { go as fuzzySearch } from 'fuzzysort'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { WindowLinkOpen } from '../Helpers/Window.js'
+import { ModuleStoreListCacheEntry, ModuleStoreListCacheStore } from '@companion-app/shared/Model/ModulesStore.js'
 
 interface DiscoverModulesPanelProps {
 	doManageModule: (moduleId: string) => void
@@ -118,7 +118,7 @@ export const DiscoverModulesPanel = observer(function DiscoverModulesPanel({
 })
 
 interface StoreModuleEntryProps {
-	moduleInfo: ModuleStoreCacheEntry
+	moduleInfo: ModuleStoreListCacheEntry
 	doManageModule: (moduleId: string) => void
 	doInstallLatestModule: (moduleId: string) => void
 }
@@ -179,34 +179,34 @@ const StoreModuleEntry = observer(function StoreModuleEntry({
 	)
 })
 
-function useModuleStoreList(): ModuleStoreCacheStore | null {
+function useModuleStoreList(): ModuleStoreListCacheStore | null {
 	// TODO - this needs to subscribe, even when this is not visible...
 
 	const { socket } = useContext(RootAppStoreContext)
 
-	const [moduleStoreCache, setModuleStoreCache] = useState<ModuleStoreCacheStore | null>(null)
+	const [moduleStoreCache, setModuleStoreCache] = useState<ModuleStoreListCacheStore | null>(null)
 
 	useEffect(() => {
 		let destroyed = false
 
-		const updateCache = (data: ModuleStoreCacheStore) => {
+		const updateCache = (data: ModuleStoreListCacheStore) => {
 			if (destroyed) return
 			setModuleStoreCache(data)
 		}
 
-		socketEmitPromise(socket, 'modules-store:subscribe', [])
+		socketEmitPromise(socket, 'modules-store:list:subscribe', [])
 			.then(updateCache)
 			.catch((err) => {
 				console.error('Failed to subscribe to module store', err)
 			})
 
-		socket.on('modules-store:data', updateCache)
+		socket.on('modules-store:list:data', updateCache)
 
 		return () => {
 			destroyed = true
-			socket.off('modules-store:data', updateCache)
+			socket.off('modules-store:list:data', updateCache)
 
-			socketEmitPromise(socket, 'modules-store:unsubscribe', []).catch((err) => {
+			socketEmitPromise(socket, 'modules-store:list:unsubscribe', []).catch((err) => {
 				console.error('Failed to unsubscribe to module store', err)
 			})
 		}
@@ -216,10 +216,10 @@ function useModuleStoreList(): ModuleStoreCacheStore | null {
 }
 
 function useFilteredStoreProducts(
-	moduleStoreCache: ModuleStoreCacheStore | null,
+	moduleStoreCache: ModuleStoreListCacheStore | null,
 	filter: string
-): ModuleStoreCacheEntry[] {
-	const allProducts: ModuleStoreCacheEntry[] = useMemo(
+): ModuleStoreListCacheEntry[] {
+	const allProducts: ModuleStoreListCacheEntry[] = useMemo(
 		() =>
 			Object.values(moduleStoreCache?.modules ?? {}).flatMap((moduleInfo) =>
 				moduleInfo.products.map((product) => ({
