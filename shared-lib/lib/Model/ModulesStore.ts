@@ -6,6 +6,17 @@ export interface ModuleStoreCacheEntry {
 	keywords: string[]
 	versions: ModuleStoreCacheVersionEntry[]
 
+	storeUrl: string
+	githubUrl: string | null
+
+	// description: string | null
+
+	// licenseSPDX: string
+	// isPaid
+
+	// Platform support?
+	// Has compatible version?
+
 	// TODO - more props
 }
 export interface ModuleStoreCacheVersionEntry {

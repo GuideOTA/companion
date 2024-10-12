@@ -114,6 +114,9 @@ export class ModuleStoreService {
 								tarUrl: 'https://builds.julusian.dev/companion-builds/atem-test-3.14.1.tgz',
 							},
 						],
+
+						storeUrl: 'https://bitfocus.io/connections/bmd-atem',
+						githubUrl: 'https://github.com/bitfocus/companion-module-bmd-atem',
 					},
 				},
 			}
@@ -133,6 +136,9 @@ export class ModuleStoreService {
 							tarUrl: 'https://builds.julusian.dev/companion-builds/pkg%20(2).tgz',
 						},
 					],
+
+					storeUrl: 'https://bitfocus.io/connections/test',
+					githubUrl: null,
 				}
 			}
 

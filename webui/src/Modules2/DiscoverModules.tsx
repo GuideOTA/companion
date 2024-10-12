@@ -1,7 +1,8 @@
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { observer } from 'mobx-react-lite'
 import { RootAppStoreContext } from '../Stores/RootAppStore.js'
-import { faQuestionCircle } from '@fortawesome/free-solid-svg-icons'
+import { faExternalLink, faQuestionCircle } from '@fortawesome/free-solid-svg-icons'
+import { faGithub } from '@fortawesome/free-brands-svg-icons'
 import { socketEmitPromise } from '../util.js'
 import { CAlert, CButton } from '@coreui/react'
 import { NonIdealState } from '../Components/NonIdealState.js'
@@ -9,6 +10,8 @@ import { ModuleStoreCacheEntry, ModuleStoreCacheStore } from '@companion-app/sha
 import { RefreshModulesList } from './RefreshModulesList.js'
 import { SearchBox } from '../Components/SearchBox.js'
 import { go as fuzzySearch } from 'fuzzysort'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { WindowLinkOpen } from '../Helpers/Window.js'
 
 interface DiscoverModulesPanelProps {
 	doManageModule: (moduleId: string) => void
@@ -160,6 +163,14 @@ const StoreModuleEntry = observer(function StoreModuleEntry({
 					<FontAwesomeIcon icon={faQuestionCircle} />
 				</div>
 			)} */}
+			<WindowLinkOpen className="float_right" title="Open Store Page" href={moduleInfo.storeUrl}>
+				<FontAwesomeIcon icon={faExternalLink} />
+			</WindowLinkOpen>
+			{!!moduleInfo.githubUrl && (
+				<WindowLinkOpen className="float_right" title="Open Store Page" href={moduleInfo.githubUrl}>
+					<FontAwesomeIcon icon={faGithub} />
+				</WindowLinkOpen>
+			)}
 		</div>
 	)
 })
