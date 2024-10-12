@@ -1,7 +1,12 @@
 import LogController from '../Log/Controller.js'
 import type { ClientSocket, UIHandler } from '../UI/Handler.js'
-import type { ModuleStoreCacheStore, ModuleStoreCacheVersionEntry } from '@companion-app/shared/Model/ModulesStore.js'
+import type {
+	ModuleStoreCacheVersionEntry,
+	ModuleStoreListCacheEntry,
+	ModuleStoreListCacheStore,
+} from '@companion-app/shared/Model/ModulesStore.js'
 import type { DataCache } from '../Data/Cache.js'
+import { cloneDeep } from 'lodash-es'
 
 const ModuleStoreRoom = 'module-store-cache'
 
@@ -24,19 +29,19 @@ export class ModuleStoreService {
 
 	/**
 	 */
-	#store: ModuleStoreCacheStore
+	#listStore: ModuleStoreListCacheStore
 
 	constructor(io: UIHandler, cacheStore: DataCache) {
 		this.#io = io
 		this.#cacheStore = cacheStore
 
-		this.#store = cacheStore.getKey(CacheStoreListKey, {
+		this.#listStore = cacheStore.getKey(CacheStoreListKey, {
 			lastUpdated: 0,
 			modules: {},
-		} satisfies ModuleStoreCacheStore)
+		} satisfies ModuleStoreListCacheStore)
 
 		// If this is the first time we're running, refresh the store data now
-		if (this.#store.lastUpdated === 0) {
+		if (this.#listStore.lastUpdated === 0) {
 			setImmediate(() => this.refreshStoreData())
 		}
 	}
@@ -53,11 +58,11 @@ export class ModuleStoreService {
 			client.join(ModuleStoreRoom)
 
 			// Check if the data is stale enough to refresh
-			if (this.#store.lastUpdated < Date.now() - SUBSCRIBE_REFRESH_INTERVAL) {
+			if (this.#listStore.lastUpdated < Date.now() - SUBSCRIBE_REFRESH_INTERVAL) {
 				this.refreshStoreData()
 			}
 
-			return this.#store
+			return this.#listStore
 		})
 
 		client.onPromise('modules-store:unsubscribe', async () => {
@@ -65,8 +70,8 @@ export class ModuleStoreService {
 		})
 	}
 
-	getModuleVersionInfo(moduleId: string, versionId: string): ModuleStoreCacheVersionEntry | null {
-		const module = this.#store.modules[moduleId]
+	getCachedModuleVersionInfo(moduleId: string, versionId: string): ModuleStoreCacheVersionEntry | null {
+		const module = this.#listStore.modules[moduleId]
 		if (!module) return null
 
 		return module.versions.find((v) => v.id === versionId) ?? null
@@ -85,69 +90,17 @@ export class ModuleStoreService {
 			this.#io.emit('modules-store:progress', 0.2)
 			await new Promise((resolve) => setTimeout(resolve, 2000))
 			this.#io.emit('modules-store:progress', 0.6)
-			await new Promise((resolve) => setTimeout(resolve, 4000))
+			await new Promise((resolve) => setTimeout(resolve, 2000))
 
 			// TODO - fetch and transform this from the api once it exists
-			this.#store = {
+			this.#listStore = {
 				lastUpdated: Date.now(),
-				modules: {
-					'bmd-atem': {
-						id: 'bmd-atem',
-						name: 'Blackmagic: ATEM',
-						manufacturer: 'Blackmagic Design',
-						products: ['ATEM'],
-						keywords: ['blackmagic', 'atem', 'switcher'],
-						versions: [
-							{
-								id: '5.4.3',
-								isPrerelease: false,
-								releasedAt: new Date('2021-01-01').getTime(),
-								tarUrl: 'https://builds.julusian.dev/companion-builds/pkg%20(2).tgz',
-							},
-							{
-								id: '3.14.0',
-								isPrerelease: false,
-								releasedAt: new Date('2021-01-02').getTime(),
-								tarUrl: '',
-							},
-							{
-								id: '3.14.1',
-								isPrerelease: false,
-								releasedAt: new Date('2021-01-02').getTime(),
-								tarUrl: 'https://builds.julusian.dev/companion-builds/atem-test-3.14.1.tgz',
-							},
-						],
-
-						storeUrl: 'https://bitfocus.io/connections/bmd-atem',
-						githubUrl: 'https://github.com/bitfocus/companion-module-bmd-atem',
-					},
-				},
+				modules: cloneDeep(tmpStoreListData),
 			}
 
-			for (let i = 0; i < 20; i++) {
-				this.#store.modules[`test-module-${i}`] = {
-					id: `test-module-${i}`,
-					name: `Test Module ${i}`,
-					manufacturer: 'Test Manufacturer',
-					products: ['Test Product'],
-					keywords: ['test', 'module'],
-					versions: [
-						{
-							id: '1.0.0',
-							isPrerelease: false,
-							releasedAt: new Date('2021-01-01').getTime(),
-							tarUrl: 'https://builds.julusian.dev/companion-builds/pkg%20(2).tgz',
-						},
-					],
+			this.#cacheStore.setKey(CacheStoreListKey, this.#listStore)
 
-					storeUrl: 'https://bitfocus.io/connections/test',
-					githubUrl: null,
-				}
-			}
-
-			this.#cacheStore.setKey(CacheStoreListKey, this.#store)
-
-			this.#io.emitToRoom(ModuleStoreRoom, 'modules-store:data', this.#store)
+			this.#io.emitToRoom(ModuleStoreRoom, 'modules-store:data', this.#listStore)
 			this.#io.emit('modules-store:progress', 1)
 		} catch (e) {
 			// TODO - what to do in this situation?
@@ -155,5 +108,58 @@ export class ModuleStoreService {
 		} finally {
 			this.#isRefreshingStoreData = false
 		}
+	}
+}
+
+const tmpStoreListData: Record<string, ModuleStoreListCacheEntry> = {
+	'bmd-atem': {
+		id: 'bmd-atem',
+		name: 'Blackmagic: ATEM',
+		manufacturer: 'Blackmagic Design',
+		products: ['ATEM'],
+		keywords: ['blackmagic', 'atem', 'switcher'],
+		// versions: [
+		// 	{
+		// 		id: '5.4.3',
+		// 		isPrerelease: false,
+		// 		releasedAt: new Date('2021-01-01').getTime(),
+		// 		tarUrl: 'https://builds.julusian.dev/companion-builds/pkg%20(2).tgz',
+		// 	},
+		// 	{
+		// 		id: '3.14.0',
+		// 		isPrerelease: false,
+		// 		releasedAt: new Date('2021-01-02').getTime(),
+		// 		tarUrl: '',
+		// 	},
+		// 	{
+		// 		id: '3.14.1',
+		// 		isPrerelease: false,
+		// 		releasedAt: new Date('2021-01-02').getTime(),
+		// 		tarUrl: 'https://builds.julusian.dev/companion-builds/atem-test-3.14.1.tgz',
+		// 	},
+		// ],
+
+		storeUrl: 'https://bitfocus.io/connections/bmd-atem',
+		githubUrl: 'https://github.com/bitfocus/companion-module-bmd-atem',
+	},
+}
+for (let i = 0; i < 20; i++) {
+	tmpStoreListData[`test-module-${i}`] = {
+		id: `test-module-${i}`,
+		name: `Test Module ${i}`,
+		manufacturer: 'Test Manufacturer',
+		products: ['Test Product'],
+		keywords: ['test', 'module'],
+		// versions: [
+		// 	{
+		// 		id: '1.0.0',
+		// 		isPrerelease: false,
+		// 		releasedAt: new Date('2021-01-01').getTime(),
+		// 		tarUrl: 'https://builds.julusian.dev/companion-builds/pkg%20(2).tgz',
+		// 	},
+		// ],
+
+		storeUrl: 'https://bitfocus.io/connections/test',
+		githubUrl: null,
 	}
 }

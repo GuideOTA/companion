@@ -44,7 +44,7 @@ import type { RecordSessionInfo, RecordSessionListInfo } from './Model/ActionRec
 import type { ActionDefinitionUpdate, ClientActionDefinition } from './Model/ActionDefinitionModel.js'
 import type { CloudControllerState, CloudRegionState } from './Model/Cloud.js'
 import type { ModuleInfoUpdate, ModuleVersionInfo, ModuleVersionMode, NewClientModuleInfo } from './Model/ModuleInfo.js'
-import type { ModuleStoreCacheStore } from './Model/ModulesStore.js'
+import type { ModuleStoreListCacheStore } from './Model/ModulesStore.js'
 
 export interface ClientToBackendEventsMap {
 	disconnect: () => never // Hack because type is missing
@@ -328,7 +328,7 @@ export interface ClientToBackendEventsMap {
 	'modules:install-store-module': (moduleId: string, versionId: string) => string | null
 	'modules:uninstall-store-module': (moduleId: string, versionId: string) => string | null
 
-	'modules-store:subscribe': () => ModuleStoreCacheStore
+	'modules-store:subscribe': () => ModuleStoreListCacheStore
 	'modules-store:unsubscribe': () => void
 	'modules-store:refresh': () => void
 
@@ -388,7 +388,7 @@ export interface BackendToClientEventsMap {
 
 	'surfaces:discovery:update': (update: SurfacesDiscoveryUpdate) => void
 
-	'modules-store:data': (data: ModuleStoreCacheStore) => void
+	'modules-store:data': (data: ModuleStoreListCacheStore) => void
 	'modules-store:progress': (percent: number) => void
 
 	'emulator:images': (newImages: EmulatorImage[] | EmulatorImageCache) => void

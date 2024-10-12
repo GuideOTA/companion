@@ -112,7 +112,7 @@ export class InstanceInstalledModulesManager {
 				return `Module ${moduleId} v${moduleVersion} already exists`
 			}
 
-			const versionInfo = this.#modulesStore.getModuleVersionInfo(moduleId, moduleVersion)
+			const versionInfo = this.#modulesStore.getCachedModuleVersionInfo(moduleId, moduleVersion)
 			if (!versionInfo) {
 				this.#logger.warn(`Unable to install ${moduleId} v${moduleVersion}, it is not known in the store`)
 				return `Module ${moduleId} v${moduleVersion} not found`
