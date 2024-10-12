@@ -135,7 +135,7 @@ function AddConnectionEntry({ module, addConnection, showHelp }: AddConnectionEn
 	)
 
 	return (
-		<div key={module.baseInfo.name + module.baseInfo.id}>
+		<div>
 			<CButton color="primary" onClick={addConnectionClick}>
 				Add
 			</CButton>

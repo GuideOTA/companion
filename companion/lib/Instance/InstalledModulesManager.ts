@@ -169,6 +169,14 @@ export class InstanceInstalledModulesManager {
 			return this.#installModuleFromTarBuffer('release', moduleDir, manifestJson, decompressedData)
 		})
 
+		client.onPromise('modules:install-store-module:latest', async (moduleId) => {
+			this.#logger.debug('modules:install-store-module:latest', moduleId)
+
+			// TODO - implement
+
+			return 'Not implemented'
+		})
+
 		client.onPromise('modules:uninstall-store-module', async (moduleId, versionId) => {
 			return this.#uninstallModule('release', this.#storeModulesDir, moduleId, versionId)
 		})

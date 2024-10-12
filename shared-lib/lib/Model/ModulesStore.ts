@@ -15,6 +15,8 @@ export interface ModuleStoreCacheVersionEntry {
 
 	tarUrl: string
 
+	// apiVersion: string // TODO
+
 	// TODO - more props
 }
 

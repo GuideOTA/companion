@@ -10,6 +10,7 @@ import { nanoid } from 'nanoid'
 import { faCog, faPlus } from '@fortawesome/free-solid-svg-icons'
 import classNames from 'classnames'
 import { NewClientModuleVersionInfo2 } from '@companion-app/shared/Model/ModuleInfo.js'
+import { DiscoverModulesPanel } from './DiscoverModules.js'
 
 export const ModulesPage = memo(function ConnectionsPage() {
 	const helpModalRef = useRef<HelpModalRef>(null)
@@ -67,6 +68,7 @@ export const ModulesPage = memo(function ConnectionsPage() {
 					<CTabContent className="remove075right">
 						<CTabPane role="tabpanel" aria-labelledby="discover-tab" visible={activeTab === 'discover'}>
 							<MyErrorBoundary>
+								<DiscoverModulesPanel doManageModule={doManageModule} />
 								{/* <AddConnectionsPanel showHelp={showHelp} doConfigureConnection={doConfigureConnection} /> */}
 							</MyErrorBoundary>
 						</CTabPane>

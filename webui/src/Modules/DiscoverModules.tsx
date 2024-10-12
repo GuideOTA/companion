@@ -1,46 +1,26 @@
-import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { observer } from 'mobx-react-lite'
 import { RootAppStoreContext } from '../Stores/RootAppStore.js'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFileImport, faQuestionCircle, faSync } from '@fortawesome/free-solid-svg-icons'
-import { HelpModal, HelpModalRef } from '../Connections/HelpModal.js'
+import { faQuestionCircle } from '@fortawesome/free-solid-svg-icons'
 import { NewClientModuleInfo } from '@companion-app/shared/Model/ModuleInfo.js'
-import { socketEmitPromise, useComputed } from '../util.js'
-import { CAlert, CButton, CButtonGroup } from '@coreui/react'
+import { socketEmitPromise } from '../util.js'
+import { CButton } from '@coreui/react'
 import { NonIdealState } from '../Components/NonIdealState.js'
 import { ModuleStoreCacheEntry, ModuleStoreCacheStore } from '@companion-app/shared/Model/ModulesStore.js'
+import { RefreshModulesList } from '../Modules2/RefreshModulesList.js'
 
 export const DiscoverVersions = observer(function InstalledModules() {
-	const { socket, modules } = useContext(RootAppStoreContext)
+	const { modules } = useContext(RootAppStoreContext)
 
-	const refreshProgress = useRefreshProgress()
 	const moduleStoreCache = useModuleStoreList()
-
-	const doRefreshModules = useCallback(() => {
-		socketEmitPromise(socket, 'modules-store:refresh', []).catch((err) => {
-			console.error('Failed to refresh modules', err)
-		})
-	}, [socket])
 
 	const moduleInfos = Object.values(moduleStoreCache?.modules || {})
 
-	const [refreshError, setLoadError] = useState<string | null>(null)
 	return (
 		<>
-			<div>
-				{refreshError ? <CAlert color="warning">{refreshError}</CAlert> : ''}
+			<RefreshModulesList />
 
-				{refreshProgress !== 1 ? (
-					<CButton color="primary" disabled>
-						<FontAwesomeIcon icon={faSync} spin={true} />
-						&nbsp;Refreshing modules list {Math.round(refreshProgress * 100)}%
-					</CButton>
-				) : (
-					<CButton color="primary" onClick={doRefreshModules}>
-						<FontAwesomeIcon icon={faSync} />
-						&nbsp;Refresh modules list
-					</CButton>
-				)}
+			<div>
 				<p>
 					Last updated:{' '}
 					{moduleStoreCache ? (moduleStoreCache.lastUpdated === 0 ? 'Never' : moduleStoreCache.lastUpdated) : 'Unknown'}
@@ -112,28 +92,6 @@ const ModuleEntry = observer(function ModuleEntry({ moduleInfo, installedModuleI
 		</>
 	)
 })
-
-function useRefreshProgress(): number {
-	// TODO - this needs to subscribe, even when this is not visible...
-
-	const { socket } = useContext(RootAppStoreContext)
-
-	const [refreshProgress, setRefreshProgress] = useState(1) // Assume fully loaded
-
-	useEffect(() => {
-		const handler = (progress: number) => {
-			setRefreshProgress(progress)
-		}
-
-		socket.on('modules-store:progress', handler)
-
-		return () => {
-			socket.off('modules-store:progress', handler)
-		}
-	}, [socket])
-
-	return refreshProgress
-}
 
 function useModuleStoreList(): ModuleStoreCacheStore | null {
 	// TODO - this needs to subscribe, even when this is not visible...
