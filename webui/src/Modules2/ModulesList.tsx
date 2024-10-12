@@ -13,6 +13,7 @@ import { Tuck } from '../Components/Tuck.js'
 import { NewClientModuleVersionInfo2 } from '@companion-app/shared/Model/ModuleInfo.js'
 import { SearchBox } from '../Components/SearchBox.js'
 import { ModuleProductInfo, useFilteredProducts } from '../Hooks/useFilteredProducts.js'
+import { ImportCustomModule } from './ImportCustomModule.js'
 
 interface VisibleModulesState {
 	dev: boolean
@@ -129,6 +130,8 @@ export const ModulesList = observer(function ModulesList({
 			<h4>Manage Modules</h4>
 
 			<p>Here you can view and manage the modules you have installed.</p>
+
+			<ImportCustomModule />
 
 			<SearchBox filter={filter} setFilter={setFilter} />
 
