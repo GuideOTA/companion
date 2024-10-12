@@ -12,6 +12,7 @@ import { go as fuzzySearch } from 'fuzzysort'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { WindowLinkOpen } from '../Helpers/Window.js'
 import { ModuleStoreListCacheEntry, ModuleStoreListCacheStore } from '@companion-app/shared/Model/ModulesStore.js'
+import { LastUpdatedTimestamp } from './LastUpdatedTimestamp.js'
 
 interface DiscoverModulesPanelProps {
 	doManageModule: (moduleId: string) => void
@@ -91,12 +92,7 @@ export const DiscoverModulesPanel = observer(function DiscoverModulesPanel({
 
 				<RefreshModulesList />
 				<p>
-					Last updated:&nbsp;
-					{moduleStoreCache
-						? moduleStoreCache.lastUpdated === 0
-							? 'Never'
-							: new Date(moduleStoreCache.lastUpdated).toISOString()
-						: 'Unknown'}
+					<LastUpdatedTimestamp timestamp={moduleStoreCache?.lastUpdated} />
 				</p>
 
 				<SearchBox filter={filter} setFilter={setFilter} />

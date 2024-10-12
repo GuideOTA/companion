@@ -1,10 +1,10 @@
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useMemo, useState, version } from 'react'
 import { ConnectionsContext, LoadingRetryOrError, socketEmitPromise } from '../util.js'
 import { CRow, CCol, CButton, CFormSelect, CAlert } from '@coreui/react'
 import { TextInputField } from '../Components/index.js'
 import { nanoid } from 'nanoid'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faQuestionCircle } from '@fortawesome/free-solid-svg-icons'
+import { faPlug, faPlus, faQuestion, faQuestionCircle, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { isLabelValid } from '@companion-app/shared/Label.js'
 import { ClientConnectionConfig } from '@companion-app/shared/Model/Common.js'
 import { useOptionsAndIsVisible } from '../Hooks/useOptionsAndIsVisible.js'
@@ -13,9 +13,16 @@ import { RootAppStoreContext } from '../Stores/RootAppStore.js'
 import { observer } from 'mobx-react-lite'
 import type {
 	ModuleVersionInfo,
+	ModuleVersionMode,
 	NewClientModuleInfo,
 	NewClientModuleVersionInfo2,
 } from '@companion-app/shared/Model/ModuleInfo.js'
+import { ModuleStoreModuleInfoStore, ModuleStoreModuleInfoVersion } from '@companion-app/shared/Model/ModulesStore.js'
+import { RefreshModuleInfo } from './RefreshModuleInfo.js'
+import semver from 'semver'
+import { faDochub } from '@fortawesome/free-brands-svg-icons'
+import { toJS } from 'mobx'
+import { LastUpdatedTimestamp } from './LastUpdatedTimestamp.js'
 
 interface ModuleManagePanelProps {
 	moduleId: string
@@ -70,42 +77,7 @@ const ModuleManagePanelInner = observer(function ModuleManagePanelInner({
 	const [error, setError] = useState<string | null>(null)
 	const [reloadToken, setReloadToken] = useState(nanoid())
 
-	// useEffect(() => {
-	// 	if (connectionId) {
-	// 		socketEmitPromise(socket, 'connections:edit', [connectionId])
-	// 			.then((res) => {
-	// 				if (res) {
-	// 					if (res.fields) {
-	// 						const validFields: Record<string, boolean> = {}
-	// 						for (const field of res.fields) {
-	// 							// Real validation status gets generated when the editor components first mount
-	// 							validFields[field.id] = true
-	// 						}
-
-	// 						setConfigFields(res.fields)
-	// 						setValidFields(validFields)
-	// 					} else {
-	// 						setConfigFields(null)
-	// 						setValidFields(null)
-	// 					}
-
-	// 					setConnectionConfig(res.config as any)
-	// 				} else {
-	// 					setError(`Connection config unavailable`)
-	// 				}
-	// 			})
-	// 			.catch((e) => {
-	// 				setError(`Failed to load connection info: "${e}"`)
-	// 			})
-	// 	}
-
-	// 	return () => {
-	// 		setError(null)
-	// 		setConfigFields(null)
-	// 		setConnectionConfig(null)
-	// 		setValidFields(null)
-	// 	}
-	// }, [socket, connectionId, reloadToken])
+	const moduleStoreInfo = useModuleStoreInfo(moduleId)
 
 	const doRetryConfigLoad = useCallback(() => setReloadToken(nanoid()), [])
 
@@ -142,45 +114,242 @@ const ModuleManagePanelInner = observer(function ModuleManagePanelInner({
 				)} */}
 			</h5>
 
-			<h6>Versions:</h6>
-			{/* <CRow className="edit-connection">
-				<CCol className={`fieldtype-textinput`} sm={12}>
-					<label>Label</label>
-					<TextInputField
-						value={connectionLabel ?? ''}
-						setValue={setConnectionLabel}
-						// isValid={isLabelValid(connectionLabel)}
-					/>
-				</CCol>
+			<RefreshModuleInfo moduleId={moduleId} />
+			<p>
+				<LastUpdatedTimestamp timestamp={moduleStoreInfo?.lastUpdated} />
+			</p>
 
-				<CCol className={`fieldtype-textinput`} sm={12}>
-					<label>Module Version</label>
-					<CFormSelect
-						name="colFormVersion"
-						value={JSON.stringify(connectionVersion)}
-						onChange={(e) => setConnectionVersion(JSON.parse(e.currentTarget.value))}
-						disabled={connectionInfo.enabled}
-						title={
-							connectionInfo.enabled
-								? 'Connection must be disabled to change version'
-								: 'Select the version of the module to use for this connection'
-						}
-					>
-						{getConnectionVersionSelectOptions(moduleInfo).map((v) => (
-							<option key={v.value} value={v.value}>
-								{v.label}
-							</option>
-						))}
-					</CFormSelect>
-
-					<br />
-					<CAlert color="warning">
-						Be careful when downgrading the module version. Some features may not be available in older versions.
-					</CAlert>
-				</CCol>
-
-			
-			</CRow> */}
+			<ModuleVersionsTable moduleInfo={moduleInfo} moduleStoreInfo={moduleStoreInfo} />
 		</div>
 	)
 })
+
+interface ModuleVersionsTableProps {
+	moduleInfo: NewClientModuleInfo
+	moduleStoreInfo: ModuleStoreModuleInfoStore | null
+}
+
+const ModuleVersionsTable = observer(function ModuleVersionsTable({
+	moduleInfo,
+	moduleStoreInfo,
+}: ModuleVersionsTableProps) {
+	const allVersionsSet = new Set<string>()
+	const installedModuleVersions = new Map<string, NewClientModuleVersionInfo2>()
+	for (const version of moduleInfo.releaseVersions) {
+		if (version.version.id) {
+			installedModuleVersions.set(version.version.id, version)
+			allVersionsSet.add(version.version.id)
+		}
+	}
+	const storeModuleVersions = new Map<string, ModuleStoreModuleInfoVersion>()
+	for (const version of moduleStoreInfo?.versions ?? []) {
+		storeModuleVersions.set(version.id, version)
+		allVersionsSet.add(version.id)
+	}
+
+	const allVersionNumbers = Array.from(allVersionsSet).sort((a, b) => semver.compare(a, b))
+
+	console.log(toJS(moduleInfo), moduleStoreInfo)
+	return (
+		<table className="table-tight table-responsive-sm">
+			<thead>
+				<tr>
+					<th>Version</th>
+					<th colSpan={3} className="fit">
+						{/* <CButtonGroup style={{ float: 'right', margin: 0 }}>
+					<CButton
+						size="sm"
+						color="secondary"
+						style={{
+							backgroundColor: 'white',
+							opacity: visibleModules.dev ? 1 : 0.4,
+							padding: '1px 5px',
+							color: 'black',
+						}}
+						onClick={doToggleDev}
+					>
+						Dev
+					</CButton>
+					<CButton
+						size="sm"
+						color="success"
+						style={{ opacity: visibleModules.builtin ? 1 : 0.4, padding: '1px 5px' }}
+						onClick={doToggleBuiltin}
+					>
+						Builtin
+					</CButton>
+					<CButton
+						color="warning"
+						size="sm"
+						style={{ opacity: visibleModules.store ? 1 : 0.4, padding: '1px 5px' }}
+						onClick={doToggleStore}
+					>
+						Store
+					</CButton>
+					<CButton
+						color="danger"
+						size="sm"
+						style={{ opacity: visibleModules.custom ? 1 : 0.4, padding: '1px 5px' }}
+						onClick={doToggleCustom}
+					>
+						Custom
+					</CButton>
+				</CButtonGroup> */}
+					</th>
+				</tr>
+			</thead>
+			<tbody>
+				{allVersionNumbers.map((versionId) => (
+					<ModuleVersionRow
+						key={versionId}
+						moduleId={moduleInfo.baseInfo.id}
+						versionId={versionId}
+						storeInfo={storeModuleVersions.get(versionId)}
+						installedInfo={installedModuleVersions.get(versionId)}
+						isLatestStable={
+							!!moduleInfo.stableVersion && // TODO - this doesn't work, these moduleInfo.stableVersion fields don't include a version number...
+							moduleInfo.stableVersion.version.mode === 'stable' &&
+							versionId === moduleInfo.stableVersion.version.id
+						}
+						isLatestPrerelease={
+							!!moduleInfo.prereleaseVersion &&
+							moduleInfo.prereleaseVersion.version.mode === 'prerelease' &&
+							versionId === moduleInfo.prereleaseVersion.version.id
+						}
+					/>
+				))}
+				{/* {hiddenCount > 0 && (
+			<tr>
+				<td colSpan={4} style={{ padding: '10px 5px' }}>
+					<FontAwesomeIcon icon={faEyeSlash} style={{ marginRight: '0.5em', color: 'red' }} />
+					<strong>{hiddenCount} Modules are hidden</strong>
+				</td>
+			</tr>
+		)} */}
+			</tbody>
+		</table>
+	)
+})
+
+interface ModuleVersionRowProps {
+	moduleId: string
+	versionId: string
+	installedInfo: NewClientModuleVersionInfo2 | undefined
+	storeInfo: ModuleStoreModuleInfoVersion | undefined
+	isLatestStable: boolean
+	isLatestPrerelease: boolean
+}
+
+function ModuleVersionRow({
+	moduleId,
+	versionId,
+	installedInfo,
+	storeInfo,
+	isLatestStable,
+	isLatestPrerelease,
+}: ModuleVersionRowProps) {
+	if (!storeInfo && !installedInfo) return null // Should never happen
+
+	return (
+		<tr>
+			<td>
+				{installedInfo ? (
+					<CButton>
+						<FontAwesomeIcon icon={faTrash} title="Remove version" />
+					</CButton>
+				) : (
+					<CButton>
+						<FontAwesomeIcon icon={faPlus} title="Install version" />
+					</CButton>
+				)}
+			</td>
+			<td>{versionId}</td>
+			<td>
+				{/* <FontAwesomeIcon icon={faDochub} title="test" /> */}
+				<ModuleVersionUsageIcon
+					moduleId={moduleId}
+					moduleVersionId={versionId}
+					isLatestStable={isLatestStable}
+					isLatestPrerelease={isLatestPrerelease}
+				/>
+			</td>
+		</tr>
+	)
+}
+
+interface ModuleVersionUsageIconProps {
+	moduleId: string
+	moduleVersionId: string | null
+	isLatestStable: boolean
+	isLatestPrerelease: boolean
+}
+
+const ModuleVersionUsageIcon = observer(function ModuleVersionUsageIcon({
+	moduleId,
+	moduleVersionId,
+	isLatestStable,
+	isLatestPrerelease,
+}: ModuleVersionUsageIconProps) {
+	const connections = useContext(ConnectionsContext)
+
+	let matchingConnections = 0
+	for (const connection of Object.values(connections)) {
+		if (connection.instance_type !== moduleId) continue
+
+		if (connection.moduleVersionMode === 'specific-version' && connection.moduleVersionId === moduleVersionId) {
+			matchingConnections++
+		} else if (connection.moduleVersionMode === 'stable' && isLatestStable) {
+			matchingConnections++
+		} else if (connection.moduleVersionMode === 'prerelease' && isLatestPrerelease) {
+			matchingConnections++
+		}
+	}
+
+	if (matchingConnections === 0) return null // TODO - needs a placeholder for positioning
+
+	return <FontAwesomeIcon icon={faPlug} title={`${matchingConnections} connections are using this version`} />
+})
+
+function useModuleStoreInfo(moduleId: string): ModuleStoreModuleInfoStore | null {
+	// TODO - this needs to subscribe, even when this is not visible...
+
+	const { socket } = useContext(RootAppStoreContext)
+
+	const [moduleStoreCache, setModuleStoreCache] = useState<ModuleStoreModuleInfoStore | null>(null)
+
+	useEffect(() => {
+		let destroyed = false
+
+		setModuleStoreCache(null)
+
+		const updateCache = (msgModuleId: string, data: ModuleStoreModuleInfoStore) => {
+			if (destroyed) return
+			if (msgModuleId !== moduleId) return
+			setModuleStoreCache(data)
+		}
+
+		socketEmitPromise(socket, 'modules-store:info:subscribe', [moduleId])
+			.then((data) => {
+				if (destroyed) return
+				setModuleStoreCache(data)
+			})
+			.catch((err) => {
+				console.error('Failed to subscribe to module store', err)
+			})
+
+		socket.on('modules-store:info:data', updateCache)
+
+		return () => {
+			destroyed = true
+			socket.off('modules-store:info:data', updateCache)
+
+			setModuleStoreCache(null)
+
+			socketEmitPromise(socket, 'modules-store:info:unsubscribe', [moduleId]).catch((err) => {
+				console.error('Failed to unsubscribe to module store', err)
+			})
+		}
+	}, [socket, moduleId])
+
+	return moduleStoreCache
+}

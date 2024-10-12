@@ -314,19 +314,19 @@ export class InstanceModules {
 			}
 		}
 
-		if (extraModulePath) {
-			this.#logger.info(`Looking for extra modules in: ${extraModulePath}`)
-			const candidates = await this.#moduleScanner.loadInfoForModulesInDir(extraModulePath, true)
-			for (const candidate of candidates) {
-				const moduleInfo = this.#getOrCreateModuleEntry(candidate.manifest.id)
-				moduleInfo.devModule = {
-					...candidate,
-					type: 'dev',
-				}
-			}
+		// if (extraModulePath) {
+		// 	this.#logger.info(`Looking for extra modules in: ${extraModulePath}`)
+		// 	const candidates = await this.#moduleScanner.loadInfoForModulesInDir(extraModulePath, true)
+		// 	for (const candidate of candidates) {
+		// 		const moduleInfo = this.#getOrCreateModuleEntry(candidate.manifest.id)
+		// 		moduleInfo.devModule = {
+		// 			...candidate,
+		// 			type: 'dev',
+		// 		}
+		// 	}
 
-			this.#logger.info(`Found ${candidates.length} extra modules`)
-		}
+		// 	this.#logger.info(`Found ${candidates.length} extra modules`)
+		// }
 
 		// nocommit redo this
 		// // Figure out the redirects. We do this afterwards, to ensure we avoid collisions and circles

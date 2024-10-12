@@ -6,15 +6,19 @@ import { faSync } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { socketEmitPromise } from '../util.js'
 
-export function RefreshModulesList() {
+interface RefreshModulesListProps {
+	moduleId: string
+}
+
+export function RefreshModuleInfo({ moduleId }: RefreshModulesListProps) {
 	const { socket } = useContext(RootAppStoreContext)
 
-	const refreshProgress = useRefreshProgress()
+	const refreshProgress = useRefreshProgress(moduleId)
 	const [refreshError, setLoadError] = useState<string | null>(null) // TODO - show this error
 
 	const doRefreshModules = useCallback(() => {
-		socketEmitPromise(socket, 'modules-store:list:refresh', []).catch((err) => {
-			console.error('Failed to refresh modules', err)
+		socketEmitPromise(socket, 'modules-store:info:refresh', [moduleId]).catch((err) => {
+			console.error('Failed to refresh module info', err)
 		})
 	}, [socket])
 
@@ -25,19 +29,19 @@ export function RefreshModulesList() {
 			{refreshProgress !== 1 ? (
 				<CButton color="primary" disabled>
 					<FontAwesomeIcon icon={faSync} spin={true} />
-					&nbsp;Refreshing modules list {Math.round(refreshProgress * 100)}%
+					&nbsp;Refreshing module info {Math.round(refreshProgress * 100)}%
 				</CButton>
 			) : (
 				<CButton color="primary" onClick={doRefreshModules}>
 					<FontAwesomeIcon icon={faSync} />
-					&nbsp;Refresh modules list
+					&nbsp;Refresh module info
 				</CButton>
 			)}
 		</div>
 	)
 }
 
-function useRefreshProgress(): number {
+function useRefreshProgress(moduleId: string): number {
 	// TODO - this needs to subscribe, even when this is not visible...
 
 	const { socket } = useContext(RootAppStoreContext)
@@ -45,16 +49,21 @@ function useRefreshProgress(): number {
 	const [refreshProgress, setRefreshProgress] = useState(1) // Assume fully loaded
 
 	useEffect(() => {
-		const handler = (progress: number) => {
+		setRefreshProgress(1)
+
+		const handler = (msgModuleId: string, progress: number) => {
+			if (msgModuleId !== moduleId) return
 			setRefreshProgress(progress)
 		}
 
-		socket.on('modules-store:list:progress', handler)
+		socket.on('modules-store:info:progress', handler)
 
 		return () => {
-			socket.off('modules-store:list:progress', handler)
+			socket.off('modules-store:info:progress', handler)
+
+			setRefreshProgress(1)
 		}
-	}, [socket])
+	}, [socket, moduleId])
 
 	return refreshProgress
 }
