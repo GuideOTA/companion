@@ -7,7 +7,7 @@ import { socketEmitPromise } from '../util.js'
 import { CButton } from '@coreui/react'
 import { NonIdealState } from '../Components/NonIdealState.js'
 import { ModuleStoreCacheEntry, ModuleStoreCacheStore } from '@companion-app/shared/Model/ModulesStore.js'
-import { RefreshModulesList } from '../Modules2/RefreshModulesList.js'
+import { RefreshModulesList } from './RefreshModulesList.js'
 
 export const DiscoverVersions = observer(function InstalledModules() {
 	const { modules } = useContext(RootAppStoreContext)

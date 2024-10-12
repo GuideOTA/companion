@@ -7,7 +7,7 @@ import { NewClientModuleInfo } from '@companion-app/shared/Model/ModuleInfo.js'
 import { socketEmitPromise, useComputed } from '../util.js'
 import { CButton, CButtonGroup } from '@coreui/react'
 import { NonIdealState } from '../Components/NonIdealState.js'
-import { ImportCustomModule } from '../Modules2/ImportCustomModule.js'
+import { ImportCustomModule } from './ImportCustomModule.js'
 
 export const AllModuleVersions = observer(function AllModuleVersions() {
 	const { modules } = useContext(RootAppStoreContext)

@@ -109,6 +109,28 @@ const ModuleManagePanelInner = observer(function ModuleManagePanelInner({
 
 	const doRetryConfigLoad = useCallback(() => setReloadToken(nanoid()), [])
 
+	/**
+	 * Store/builtin Versions table
+	 * sorted by version number
+	 * Install/uninstall button
+	 * plug icon indicating in use (hover for a count)
+	 * Icon indicating latest stable
+	 * Icon indicating latest prerelease
+	 * Indicate prerelease in version number field?
+	 * Options to filter to just installed/available
+	 *
+	 * Above table, show when info last refreshed, and a button to refresh
+	 * quick option to install latest?
+	 *
+	 * when installing version, change button to spinner?
+	 *
+	 *
+	 * Separate table of 'custom' modules?
+	 * I am tempted to combine them, but as numbers can collide will that be confusing?
+	 *
+	 *
+	 */
+
 	return (
 		<div>
 			<h5>

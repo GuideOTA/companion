@@ -23,7 +23,6 @@ import {
 	faFileImport,
 	faDollarSign,
 	faTh,
-	faDog,
 	faJedi,
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -48,8 +47,7 @@ import { ImportExport } from './ImportExport/index.js'
 import { RootAppStoreContext } from './Stores/RootAppStore.js'
 import { observer } from 'mobx-react-lite'
 import { ConnectionVariables } from './Variables/index.js'
-import { ModulesManager } from './Modules/Manager.js'
-import { ModulesPage } from './Modules2/index.js'
+import { ModulesPage } from './Modules/index.js'
 
 const useTouchBackend = window.localStorage.getItem('test_touch_backend') === '1'
 const showCloudTab = window.localStorage.getItem('show_companion_cloud') === '1'
@@ -449,7 +447,7 @@ const AppContent = observer(function AppContent({ buttonGridHotPress }: AppConte
 		<CContainer fluid className="fadeIn">
 			<CNav variant="tabs">
 				<CNavItem>
-					<CNavLink to="/modules2" as={NavLink}>
+					<CNavLink to="/modules" as={NavLink}>
 						<FontAwesomeIcon icon={faJedi} /> Modules
 					</CNavLink>
 				</CNavItem>
@@ -489,11 +487,6 @@ const AppContent = observer(function AppContent({ buttonGridHotPress }: AppConte
 					</CNavLink>
 				</CNavItem>
 				<CNavItem>
-					<CNavLink to="/modules" as={NavLink}>
-						<FontAwesomeIcon icon={faDog} /> Modules
-					</CNavLink>
-				</CNavItem>
-				<CNavItem>
 					<CNavLink to="/log" as={NavLink}>
 						<FontAwesomeIcon icon={faClipboardList} /> Log
 					</CNavLink>
@@ -507,7 +500,7 @@ const AppContent = observer(function AppContent({ buttonGridHotPress }: AppConte
 				)}
 			</CNav>
 			<CTabContent>
-				<CTabPane className={getClassForPane('/modules2')}>
+				<CTabPane className={getClassForPane('/modules')}>
 					<MyErrorBoundary>
 						<ModulesPage />
 					</MyErrorBoundary>
@@ -545,11 +538,6 @@ const AppContent = observer(function AppContent({ buttonGridHotPress }: AppConte
 				<CTabPane className={getClassForPane('/import-export')}>
 					<MyErrorBoundary>
 						<ImportExport />
-					</MyErrorBoundary>
-				</CTabPane>
-				<CTabPane className={getClassForPane('/modules')}>
-					<MyErrorBoundary>
-						<ModulesManager />
 					</MyErrorBoundary>
 				</CTabPane>
 				{getClassForPane('/log') !== '' && (
