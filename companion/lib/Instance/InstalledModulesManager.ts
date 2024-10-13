@@ -3,8 +3,6 @@ import path from 'path'
 import fs from 'fs-extra'
 import type { InstanceModules } from './Modules.js'
 import type { ClientSocket } from '../UI/Handler.js'
-import { DataDatabase } from '../Data/Database.js'
-import type { UserModuleEntry } from '@companion-app/shared/Model/UserModules.js'
 import zlib from 'node:zlib'
 import * as ts from 'tar-stream'
 import { Readable } from 'node:stream'
@@ -23,10 +21,6 @@ export class InstanceInstalledModulesManager {
 
 	/**
 	 */
-	readonly #db: DataDatabase
-
-	/**
-	 */
 	readonly #modulesManager: InstanceModules
 
 	readonly #modulesStore: ModuleStoreService
@@ -41,18 +35,11 @@ export class InstanceInstalledModulesManager {
 	 */
 	readonly #customModulesDir: string
 
-	/**
-	 */
-	#store: UserModuleEntry[]
-
-	constructor(modulesManager: InstanceModules, modulesStore: ModuleStoreService, db: DataDatabase, dirs: ModuleDirs) {
+	constructor(modulesManager: InstanceModules, modulesStore: ModuleStoreService, dirs: ModuleDirs) {
 		this.#modulesManager = modulesManager
 		this.#modulesStore = modulesStore
-		this.#db = db
 		this.#storeModulesDir = dirs.storeModulesDir
 		this.#customModulesDir = dirs.customModulesDir
-
-		this.#store = db.getKey('user-modules', [])
 	}
 
 	/**

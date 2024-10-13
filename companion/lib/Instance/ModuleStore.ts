@@ -171,50 +171,7 @@ export class ModuleStoreService {
 					id: moduleId,
 					lastUpdated: Date.now(),
 
-					versions: [
-						{
-							id: '5.4.3',
-							isPrerelease: false,
-							releasedAt: new Date('2021-01-01').getTime(),
-							tarUrl: 'https://builds.julusian.dev/companion-builds/pkg%20(2).tgz',
-							apiVersion: '2.0.0',
-						},
-						{
-							id: '5.4.2',
-							isPrerelease: true,
-							releasedAt: new Date('2021-01-01').getTime(),
-							tarUrl: 'https://builds.julusian.dev/companion-builds/pkg%20(2).tgz',
-							apiVersion: '1.12.0',
-						},
-						{
-							id: '5.4.1',
-							isPrerelease: true,
-							releasedAt: new Date('2021-01-01').getTime(),
-							tarUrl: 'https://builds.julusian.dev/companion-builds/pkg%20(2).tgz',
-							apiVersion: '1.11.1',
-						},
-						{
-							id: '3.14.0',
-							isPrerelease: false,
-							releasedAt: new Date('2021-01-02').getTime(),
-							tarUrl: null,
-							apiVersion: '1.0.0',
-						},
-						{
-							id: '3.14.1',
-							isPrerelease: false,
-							releasedAt: new Date('2021-01-02').getTime(),
-							tarUrl: 'https://builds.julusian.dev/companion-builds/atem-test-3.14.1.tgz',
-							apiVersion: '1.0.0',
-						},
-						{
-							id: '3.13.0',
-							isPrerelease: false,
-							releasedAt: new Date('2021-01-02').getTime(),
-							tarUrl: null,
-							apiVersion: '0.5.0',
-						},
-					],
+					versions: cloneDeep(tmpStoreVersionsData),
 				}
 				this.#infoStore.set(moduleId, data)
 
@@ -257,3 +214,54 @@ for (let i = 0; i < 20; i++) {
 		githubUrl: null,
 	}
 }
+
+const tmpStoreVersionsData: ModuleStoreModuleInfoVersion[] = [
+	{
+		id: '5.4.3',
+		isPrerelease: false,
+		releasedAt: new Date('2021-01-01').getTime(),
+		tarUrl: 'https://builds.julusian.dev/companion-builds/pkg%20(2).tgz',
+		apiVersion: '2.0.0',
+		deprecationReason: null,
+	},
+	{
+		id: '5.4.2',
+		isPrerelease: true,
+		releasedAt: new Date('2021-01-01').getTime(),
+		tarUrl: 'https://builds.julusian.dev/companion-builds/pkg%20(2).tgz',
+		apiVersion: '1.12.0',
+		deprecationReason: null,
+	},
+	{
+		id: '5.4.1',
+		isPrerelease: true,
+		releasedAt: new Date('2021-01-01').getTime(),
+		tarUrl: 'https://builds.julusian.dev/companion-builds/pkg%20(2).tgz',
+		apiVersion: '1.11.1',
+		deprecationReason: null,
+	},
+	{
+		id: '3.14.0',
+		isPrerelease: false,
+		releasedAt: new Date('2021-01-02').getTime(),
+		tarUrl: null,
+		apiVersion: '1.0.0',
+		deprecationReason: null,
+	},
+	{
+		id: '3.14.1',
+		isPrerelease: false,
+		releasedAt: new Date('2021-01-02').getTime(),
+		tarUrl: 'https://builds.julusian.dev/companion-builds/atem-test-3.14.1.tgz',
+		apiVersion: '1.0.0',
+		deprecationReason: null,
+	},
+	{
+		id: '3.13.0',
+		isPrerelease: false,
+		releasedAt: new Date('2021-01-02').getTime(),
+		tarUrl: null,
+		apiVersion: '0.5.0',
+		deprecationReason: null,
+	},
+]
