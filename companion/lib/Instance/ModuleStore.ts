@@ -179,6 +179,18 @@ export class ModuleStoreService {
 							tarUrl: 'https://builds.julusian.dev/companion-builds/pkg%20(2).tgz',
 						},
 						{
+							id: '5.4.2',
+							isPrerelease: true,
+							releasedAt: new Date('2021-01-01').getTime(),
+							tarUrl: 'https://builds.julusian.dev/companion-builds/pkg%20(2).tgz',
+						},
+						{
+							id: '5.4.1',
+							isPrerelease: true,
+							releasedAt: new Date('2021-01-01').getTime(),
+							tarUrl: 'https://builds.julusian.dev/companion-builds/pkg%20(2).tgz',
+						},
+						{
 							id: '3.14.0',
 							isPrerelease: false,
 							releasedAt: new Date('2021-01-02').getTime(),
@@ -189,6 +201,12 @@ export class ModuleStoreService {
 							isPrerelease: false,
 							releasedAt: new Date('2021-01-02').getTime(),
 							tarUrl: 'https://builds.julusian.dev/companion-builds/atem-test-3.14.1.tgz',
+						},
+						{
+							id: '3.13.0',
+							isPrerelease: false,
+							releasedAt: new Date('2021-01-02').getTime(),
+							tarUrl: null,
 						},
 					],
 				}

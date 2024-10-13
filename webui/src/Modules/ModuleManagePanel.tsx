@@ -4,7 +4,17 @@ import { CRow, CCol, CButton, CFormSelect, CAlert } from '@coreui/react'
 import { TextInputField } from '../Components/index.js'
 import { nanoid } from 'nanoid'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPlug, faPlus, faQuestion, faQuestionCircle, faTrash } from '@fortawesome/free-solid-svg-icons'
+import {
+	faLock,
+	faPlug,
+	faPlus,
+	faQuestion,
+	faQuestionCircle,
+	faStar,
+	faSync,
+	faToiletsPortable,
+	faTrash,
+} from '@fortawesome/free-solid-svg-icons'
 import { isLabelValid } from '@companion-app/shared/Label.js'
 import { ClientConnectionConfig } from '@companion-app/shared/Model/Common.js'
 import { useOptionsAndIsVisible } from '../Hooks/useOptionsAndIsVisible.js'
@@ -94,7 +104,9 @@ const ModuleManagePanelInner = observer(function ModuleManagePanelInner({
 	 * Above table, show when info last refreshed, and a button to refresh
 	 * quick option to install latest?
 	 *
-	 * when installing version, change button to spinner?
+	 * filter by installed/available with extra option to show deprecated (default hidden)
+	 *
+	 * should stable and prerelease be separate?
 	 *
 	 *
 	 * Separate table of 'custom' modules?
@@ -147,7 +159,7 @@ const ModuleVersionsTable = observer(function ModuleVersionsTable({
 		allVersionsSet.add(version.id)
 	}
 
-	const allVersionNumbers = Array.from(allVersionsSet).sort((a, b) => semver.compare(a, b))
+	const allVersionNumbers = Array.from(allVersionsSet).sort((a, b) => semver.compare(b, a))
 
 	console.log(toJS(moduleInfo), moduleStoreInfo)
 	return (
@@ -206,16 +218,8 @@ const ModuleVersionsTable = observer(function ModuleVersionsTable({
 						versionId={versionId}
 						storeInfo={storeModuleVersions.get(versionId)}
 						installedInfo={installedModuleVersions.get(versionId)}
-						isLatestStable={
-							!!moduleInfo.stableVersion && // TODO - this doesn't work, these moduleInfo.stableVersion fields don't include a version number...
-							moduleInfo.stableVersion.version.mode === 'stable' &&
-							versionId === moduleInfo.stableVersion.version.id
-						}
-						isLatestPrerelease={
-							!!moduleInfo.prereleaseVersion &&
-							moduleInfo.prereleaseVersion.version.mode === 'prerelease' &&
-							versionId === moduleInfo.prereleaseVersion.version.id
-						}
+						isLatestStable={!!moduleInfo.stableVersion && moduleInfo.stableVersion.versionId === versionId}
+						isLatestPrerelease={!!moduleInfo.prereleaseVersion && moduleInfo.prereleaseVersion.versionId === versionId}
 					/>
 				))}
 				{/* {hiddenCount > 0 && (
@@ -240,7 +244,7 @@ interface ModuleVersionRowProps {
 	isLatestPrerelease: boolean
 }
 
-function ModuleVersionRow({
+const ModuleVersionRow = observer(function ModuleVersionRow({
 	moduleId,
 	versionId,
 	installedInfo,
@@ -254,18 +258,16 @@ function ModuleVersionRow({
 		<tr>
 			<td>
 				{installedInfo ? (
-					<CButton>
-						<FontAwesomeIcon icon={faTrash} title="Remove version" />
-					</CButton>
+					<ModuleUninstallButton moduleId={moduleId} versionId={versionId} isBuiltin={installedInfo.isBuiltin} />
 				) : (
-					<CButton>
-						<FontAwesomeIcon icon={faPlus} title="Install version" />
-					</CButton>
+					<ModuleInstallButton moduleId={moduleId} versionId={versionId} />
 				)}
 			</td>
 			<td>{versionId}</td>
 			<td>
-				{/* <FontAwesomeIcon icon={faDochub} title="test" /> */}
+				{isLatestStable && <FontAwesomeIcon icon={faStar} title="Latest stable" />}
+				{isLatestPrerelease && <FontAwesomeIcon icon={faQuestion} title="Latest prerelease" />}
+
 				<ModuleVersionUsageIcon
 					moduleId={moduleId}
 					moduleVersionId={versionId}
@@ -274,6 +276,81 @@ function ModuleVersionRow({
 				/>
 			</td>
 		</tr>
+	)
+})
+
+interface ModuleUninstallButtonProps {
+	moduleId: string
+	versionId: string
+	isBuiltin: boolean
+}
+
+function ModuleUninstallButton({ moduleId, versionId, isBuiltin }: ModuleUninstallButtonProps) {
+	const { socket } = useContext(RootAppStoreContext)
+
+	const [isRunningInstallOrUninstall, setIsRunningInstallOrUninstall] = useState(false)
+	// TODO - track and show error
+
+	const doRemove = useCallback(() => {
+		setIsRunningInstallOrUninstall(true)
+		socketEmitPromise(socket, 'modules:uninstall-store-module', [moduleId, versionId])
+			.catch((err) => {
+				console.error('Failed to uninstall module', err)
+			})
+			.finally(() => {
+				setIsRunningInstallOrUninstall(false)
+			})
+	}, [socket, moduleId, versionId])
+
+	if (isBuiltin) {
+		return (
+			<CButton color="white" disabled title="Version cannot be removed">
+				<FontAwesomeIcon icon={faLock} />
+			</CButton>
+		)
+	}
+
+	return (
+		<CButton color="white" disabled={isRunningInstallOrUninstall} onClick={doRemove}>
+			{isRunningInstallOrUninstall ? (
+				<FontAwesomeIcon icon={faSync} spin title="Removing" />
+			) : (
+				<FontAwesomeIcon icon={faTrash} title="Remove version" />
+			)}
+		</CButton>
+	)
+}
+
+interface ModuleInstallButtonProps {
+	moduleId: string
+	versionId: string
+}
+
+function ModuleInstallButton({ moduleId, versionId }: ModuleInstallButtonProps) {
+	const { socket } = useContext(RootAppStoreContext)
+
+	const [isRunningInstallOrUninstall, setIsRunningInstallOrUninstall] = useState(false)
+	// TODO - track and show error
+
+	const doInstall = useCallback(() => {
+		setIsRunningInstallOrUninstall(true)
+		socketEmitPromise(socket, 'modules:install-store-module', [moduleId, versionId])
+			.catch((err) => {
+				console.error('Failed to install module', err)
+			})
+			.finally(() => {
+				setIsRunningInstallOrUninstall(false)
+			})
+	}, [socket, moduleId, versionId])
+
+	return (
+		<CButton color="white" disabled={isRunningInstallOrUninstall} onClick={doInstall}>
+			{isRunningInstallOrUninstall ? (
+				<FontAwesomeIcon icon={faSync} spin title="Installing" />
+			) : (
+				<FontAwesomeIcon icon={faPlus} title="Install version" />
+			)}
+		</CButton>
 	)
 }
 
