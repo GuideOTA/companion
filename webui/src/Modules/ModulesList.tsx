@@ -14,6 +14,7 @@ import { NewClientModuleVersionInfo2 } from '@companion-app/shared/Model/ModuleI
 import { SearchBox } from '../Components/SearchBox.js'
 import { ModuleProductInfo, useFilteredProducts } from '../Hooks/useFilteredProducts.js'
 import { ImportCustomModule } from './ImportCustomModule.js'
+import { useTableVisibilityHelper, VisibilityButton } from '../Components/TableVisibility.js'
 
 interface VisibleModulesState {
 	dev: boolean
@@ -41,24 +42,12 @@ export const ModulesList = observer(function ModulesList({
 		connectionsRef.current = connectionsContext
 	}, [connectionsContext])
 
-	const [visibleModules, setVisibleModules] = useState<VisibleModulesState>(() => loadVisibility())
-
-	// Save the config when it changes
-	useEffect(() => {
-		window.localStorage.setItem('modules_visible', JSON.stringify(visibleModules))
-	}, [visibleModules])
-
-	const doToggleVisibility = useCallback((key: keyof VisibleModulesState) => {
-		setVisibleModules((oldConfig) => ({
-			...oldConfig,
-			[key]: !oldConfig[key],
-		}))
-	}, [])
-
-	const doToggleDev = useCallback(() => doToggleVisibility('dev'), [doToggleVisibility])
-	const doToggleBuiltin = useCallback(() => doToggleVisibility('builtin'), [doToggleVisibility])
-	const doToggleStore = useCallback(() => doToggleVisibility('store'), [doToggleVisibility])
-	const doToggleCustom = useCallback(() => doToggleVisibility('custom'), [doToggleVisibility])
+	const visibleModules = useTableVisibilityHelper<VisibleModulesState>('modules_visible', {
+		dev: true,
+		builtin: true,
+		store: true,
+		custom: true,
+	})
 
 	const [filter, setFilter] = useState('')
 
@@ -69,8 +58,8 @@ export const ModulesList = observer(function ModulesList({
 		const candidatesObj: Record<string, JSX.Element> = {}
 		for (const moduleInfo of searchResults) {
 			let isVisible = false
-			if (moduleInfo.hasDevVersion && visibleModules.dev) isVisible = true
-			if (moduleInfo.customVersions.length && visibleModules.custom) isVisible = true
+			if (moduleInfo.hasDevVersion && visibleModules.visiblity.dev) isVisible = true
+			if (moduleInfo.customVersions.length && visibleModules.visiblity.custom) isVisible = true
 
 			const [hasBuiltin, hasStore] = moduleInfo.releaseVersions.reduce(
 				([builtin, release], v) => {
@@ -80,8 +69,8 @@ export const ModulesList = observer(function ModulesList({
 				},
 				[false, false]
 			)
-			if (hasBuiltin && visibleModules.builtin) isVisible = true
-			if (hasStore && visibleModules.store) isVisible = true
+			if (hasBuiltin && visibleModules.visiblity.builtin) isVisible = true
+			if (hasStore && visibleModules.visiblity.store) isVisible = true
 
 			if (!isVisible) continue
 
@@ -140,44 +129,11 @@ export const ModulesList = observer(function ModulesList({
 					<tr>
 						<th>Module</th>
 						<th colSpan={3} className="fit">
-							<CButtonGroup style={{ float: 'right', margin: 0 }}>
-								<CButton
-									size="sm"
-									color="secondary"
-									style={{
-										backgroundColor: 'white',
-										opacity: visibleModules.dev ? 1 : 0.4,
-										padding: '1px 5px',
-										color: 'black',
-									}}
-									onClick={doToggleDev}
-								>
-									Dev
-								</CButton>
-								<CButton
-									size="sm"
-									color="success"
-									style={{ opacity: visibleModules.builtin ? 1 : 0.4, padding: '1px 5px' }}
-									onClick={doToggleBuiltin}
-								>
-									Builtin
-								</CButton>
-								<CButton
-									color="warning"
-									size="sm"
-									style={{ opacity: visibleModules.store ? 1 : 0.4, padding: '1px 5px' }}
-									onClick={doToggleStore}
-								>
-									Store
-								</CButton>
-								<CButton
-									color="danger"
-									size="sm"
-									style={{ opacity: visibleModules.custom ? 1 : 0.4, padding: '1px 5px' }}
-									onClick={doToggleCustom}
-								>
-									Custom
-								</CButton>
+							<CButtonGroup className="table-header-buttons">
+								<VisibilityButton {...visibleModules} keyId="dev" color="secondary" label="Dev" />
+								<VisibilityButton {...visibleModules} keyId="builtin" color="success" label="Builtin" />
+								<VisibilityButton {...visibleModules} keyId="store" color="warning" label="Store" />
+								<VisibilityButton {...visibleModules} keyId="custom" color="danger" label="Custom" />
 							</CButtonGroup>
 						</th>
 					</tr>
@@ -208,27 +164,6 @@ export const ModulesList = observer(function ModulesList({
 		</div>
 	)
 })
-
-function loadVisibility(): VisibleModulesState {
-	try {
-		const rawConfig = window.localStorage.getItem('modules_visible')
-		if (rawConfig !== null) {
-			return JSON.parse(rawConfig) ?? {}
-		}
-	} catch (e) {}
-
-	// setup defaults
-	const config: VisibleModulesState = {
-		dev: true,
-		builtin: true,
-		store: true,
-		custom: true,
-	}
-
-	window.localStorage.setItem('modules_visible', JSON.stringify(config))
-
-	return config
-}
 
 interface ModulesListRowProps {
 	id: string
