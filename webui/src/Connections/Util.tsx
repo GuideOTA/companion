@@ -8,16 +8,12 @@ export function getModuleVersionInfoForConnection(
 	switch (connection.moduleVersionMode) {
 		case 'stable':
 			return moduleInfo?.stableVersion
-			break
 		case 'prerelease':
 			return moduleInfo?.prereleaseVersion
-			break
 		case 'specific-version':
 			return moduleInfo?.releaseVersions.find((v) => v.version.id === connection.moduleVersionId)
-			break
 		case 'custom':
 			return moduleInfo?.customVersions.find((v) => v.version.id === connection.moduleVersionId)
-			break
 		default:
 			return undefined
 	}

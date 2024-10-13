@@ -27,6 +27,7 @@ import type {
 	ModuleVersionMode,
 	NewClientModuleInfo,
 	NewClientModuleVersionInfo2,
+	NewClientModuleVersionInfo2Ext,
 } from '@companion-app/shared/Model/ModuleInfo.js'
 import type { ClientSocket, UIHandler } from '../UI/Handler.js'
 import type { HelpDescription } from '@companion-app/shared/Model/Common.js'
@@ -601,7 +602,7 @@ export class InstanceModules {
 	}
 }
 
-function translateStableVersion(version: SomeModuleVersionInfo | null): NewClientModuleVersionInfo2 | null {
+function translateStableVersion(version: SomeModuleVersionInfo | null): NewClientModuleVersionInfo2Ext | null {
 	if (!version) return null
 	if (version.type === 'dev') {
 		return {
@@ -614,6 +615,7 @@ function translateStableVersion(version: SomeModuleVersionInfo | null): NewClien
 				mode: 'stable',
 				id: null,
 			},
+			versionId: 'dev',
 		}
 	} else if (version.type === 'release') {
 		return {
@@ -626,12 +628,13 @@ function translateStableVersion(version: SomeModuleVersionInfo | null): NewClien
 				mode: 'stable',
 				id: null,
 			},
+			versionId: version.versionId,
 		}
 	}
 	return null
 }
 
-function translatePrereleaseVersion(version: SomeModuleVersionInfo | null): NewClientModuleVersionInfo2 | null {
+function translatePrereleaseVersion(version: SomeModuleVersionInfo | null): NewClientModuleVersionInfo2Ext | null {
 	if (!version) return null
 	if (version.type === 'dev') {
 		return {
@@ -644,6 +647,7 @@ function translatePrereleaseVersion(version: SomeModuleVersionInfo | null): NewC
 				mode: 'prerelease',
 				id: null,
 			},
+			versionId: 'dev',
 		}
 	} else if (version.type === 'release') {
 		return {
@@ -656,6 +660,7 @@ function translatePrereleaseVersion(version: SomeModuleVersionInfo | null): NewC
 				mode: 'prerelease',
 				id: null,
 			},
+			versionId: version.versionId,
 		}
 	}
 	return null

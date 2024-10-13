@@ -39,14 +39,18 @@ export interface NewClientModuleVersionInfo2 {
 	hasHelp: boolean
 }
 
+export interface NewClientModuleVersionInfo2Ext extends NewClientModuleVersionInfo2 {
+	versionId: string
+}
+
 export interface NewClientModuleInfo {
 	baseInfo: NewClientModuleBaseInfo
 
 	hasDevVersion: boolean
 	// devVersion: NewClientModuleVersionInfo2 | null
 
-	stableVersion: NewClientModuleVersionInfo2 | null
-	prereleaseVersion: NewClientModuleVersionInfo2 | null
+	stableVersion: NewClientModuleVersionInfo2Ext | null
+	prereleaseVersion: NewClientModuleVersionInfo2Ext | null
 
 	releaseVersions: NewClientModuleVersionInfo2[]
 
