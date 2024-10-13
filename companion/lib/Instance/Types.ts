@@ -14,6 +14,7 @@ export interface ModuleVersionInfoBase {
 	display: ModuleDisplayInfo
 	manifest: ModuleManifest
 	isPackaged: boolean
+	isPrerelease: boolean
 }
 
 export interface ReleaseModuleVersionInfo extends ModuleVersionInfoBase {

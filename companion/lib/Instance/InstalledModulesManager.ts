@@ -81,7 +81,7 @@ export class InstanceInstalledModulesManager {
 				return `Module ${manifestJson.id} v${manifestJson.version} already exists`
 			}
 
-			return this.#installModuleFromTarBuffer('custom', moduleDir, manifestJson, decompressedData)
+			return this.#installModuleFromTarBuffer('custom', moduleDir, manifestJson, decompressedData, false)
 		})
 
 		client.onPromise('modules:uninstall-custom-module', async (moduleId, versionId) => {
@@ -153,7 +153,13 @@ export class InstanceInstalledModulesManager {
 				return 'Module manifest does not match requested module'
 			}
 
-			return this.#installModuleFromTarBuffer('release', moduleDir, manifestJson, decompressedData)
+			return this.#installModuleFromTarBuffer(
+				'release',
+				moduleDir,
+				manifestJson,
+				decompressedData,
+				versionInfo.isPrerelease
+			)
 		})
 
 		client.onPromise('modules:install-store-module:latest', async (moduleId) => {
@@ -173,7 +179,8 @@ export class InstanceInstalledModulesManager {
 		type: 'release' | 'custom',
 		moduleDir: string,
 		manifestJson: ModuleManifest,
-		uncompressedData: Buffer
+		uncompressedData: Buffer,
+		isPrerelease: boolean
 	): Promise<string | null> {
 		try {
 			await fs.mkdirp(moduleDir)
@@ -185,11 +192,14 @@ export class InstanceInstalledModulesManager {
 					.on('error', reject)
 			})
 
-			console.log('extracted to', moduleDir)
+			this.#logger.debug(`Extracted module to ${moduleDir}`)
 		} catch (e) {
 			// cleanup the dir, just to be sure it doesn't get stranded
 			await fs.rm(moduleDir, { recursive: true }).catch(() => null)
 		}
+
+		// If the module is a prerelease, create a file to indicate that
+		if (isPrerelease) await fs.writeFile(path.join(moduleDir, '.is-prerelease'), '')
 
 		this.#logger.info(`Installed module ${manifestJson.id} v${manifestJson.version}`)
 

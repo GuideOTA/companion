@@ -27,8 +27,8 @@ import type { ClientSocket, UIHandler } from '../UI/Handler.js'
 import type { HelpDescription } from '@companion-app/shared/Model/Common.js'
 import type { InstanceController } from './Controller.js'
 import jsonPatch from 'fast-json-patch'
-import { ModuleDirs, SomeModuleVersionInfo } from './Types.js'
-import { InstanceModuleInfo } from './ModuleInfo.js'
+import type { ModuleDirs, SomeModuleVersionInfo } from './Types.js'
+import type { InstanceModuleInfo } from './ModuleInfo.js'
 
 const ModulesRoom = 'modules'
 
@@ -219,14 +219,14 @@ export class InstanceModules {
 			}
 		}
 
-		// And moduels from the store
+		// And modules from the store
 		const storeModules = await this.#moduleScanner.loadInfoForModulesInDir(this.#moduleDirs.storeModulesDir, true)
 		for (const candidate of storeModules) {
 			const moduleInfo = this.#getOrCreateModuleEntry(candidate.manifest.id)
 			moduleInfo.releaseVersions[candidate.display.version] = {
 				...candidate,
 				type: 'release',
-				releaseType: 'stable', // TODO - prerelease?
+				releaseType: candidate.isPrerelease ? 'prerelease' : 'stable',
 				versionId: candidate.display.version,
 				isBuiltin: false,
 			}
