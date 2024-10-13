@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useState } from 'react'
 import { socketEmitPromise } from '../util.js'
-import { CButton } from '@coreui/react'
+import { CButton, CButtonGroup } from '@coreui/react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
 	faLock,
@@ -19,6 +19,7 @@ import { ModuleStoreModuleInfoStore, ModuleStoreModuleInfoVersion } from '@compa
 import semver from 'semver'
 import { isModuleApiVersionCompatible } from '@companion-app/shared/ModuleApiVersionCheck.js'
 import { ModuleVersionUsageIcon } from './ModuleVersionUsageIcon.js'
+import { useTableVisibilityHelper, VisibilityButton } from '../Components/TableVisibility.js'
 
 interface ModuleVersionsTableProps {
 	moduleInfo: NewClientModuleInfo
@@ -45,66 +46,62 @@ export const ModuleVersionsTable = observer(function ModuleVersionsTable({
 
 	const allVersionNumbers = Array.from(allVersionsSet).sort((a, b) => semver.compare(b, a))
 
+	const visibleVersions = useTableVisibilityHelper<VisibleVersionsState>(
+		`modules_visible_versions:${moduleInfo.baseInfo.id}`,
+		{
+			availableStable: true,
+			availableDeprecated: false,
+			availablePrerelease: false,
+		}
+	)
+
 	return (
 		<table className="table-tight table-responsive-sm">
 			<thead>
 				<tr>
 					<th>Version</th>
+					<th>&nbsp;</th>
 					<th colSpan={3} className="fit">
-						{/* <CButtonGroup style={{ float: 'right', margin: 0 }}>
-					<CButton
-						size="sm"
-						color="secondary"
-						style={{
-							backgroundColor: 'white',
-							opacity: visibleModules.dev ? 1 : 0.4,
-							padding: '1px 5px',
-							color: 'black',
-						}}
-						onClick={doToggleDev}
-					>
-						Dev
-					</CButton>
-					<CButton
-						size="sm"
-						color="success"
-						style={{ opacity: visibleModules.builtin ? 1 : 0.4, padding: '1px 5px' }}
-						onClick={doToggleBuiltin}
-					>
-						Builtin
-					</CButton>
-					<CButton
-						color="warning"
-						size="sm"
-						style={{ opacity: visibleModules.store ? 1 : 0.4, padding: '1px 5px' }}
-						onClick={doToggleStore}
-					>
-						Store
-					</CButton>
-					<CButton
-						color="danger"
-						size="sm"
-						style={{ opacity: visibleModules.custom ? 1 : 0.4, padding: '1px 5px' }}
-						onClick={doToggleCustom}
-					>
-						Custom
-					</CButton>
-				</CButtonGroup> */}
+						<CButtonGroup className="table-header-buttons">
+							<VisibilityButton {...visibleVersions} keyId="availableStable" color="success" label="Stable" />
+							<VisibilityButton {...visibleVersions} keyId="availablePrerelease" color="warning" label="Prerelease" />
+							<VisibilityButton {...visibleVersions} keyId="availableDeprecated" color="danger" label="Deprecated" />
+						</CButtonGroup>
 					</th>
 				</tr>
 			</thead>
 			<tbody>
-				{allVersionNumbers.map((versionId) => (
-					<ModuleVersionRow
-						key={versionId}
-						moduleId={moduleInfo.baseInfo.id}
-						versionId={versionId}
-						storeInfo={storeModuleVersions.get(versionId)}
-						installedInfo={installedModuleVersions.get(versionId)}
-						isLatestStable={!!moduleInfo.stableVersion && moduleInfo.stableVersion.versionId === versionId}
-						isLatestPrerelease={!!moduleInfo.prereleaseVersion && moduleInfo.prereleaseVersion.versionId === versionId}
-					/>
-				))}
+				{allVersionNumbers.map((versionId) => {
+					const storeInfo = storeModuleVersions.get(versionId)
+					const installedInfo = installedModuleVersions.get(versionId)
+					if (storeInfo) {
+						// Hide based on visibility settings
+						if (storeInfo.deprecationReason && !visibleVersions.visiblity.availableDeprecated) return null
+						if (storeInfo.isPrerelease && !visibleVersions.visiblity.availablePrerelease) return null
+
+						if (
+							!storeInfo.deprecationReason &&
+							!storeInfo.isPrerelease &&
+							!installedInfo &&
+							!visibleVersions.visiblity.availableStable
+						)
+							return null
+					}
+
+					return (
+						<ModuleVersionRow
+							key={versionId}
+							moduleId={moduleInfo.baseInfo.id}
+							versionId={versionId}
+							storeInfo={storeInfo}
+							installedInfo={installedInfo}
+							isLatestStable={!!moduleInfo.stableVersion && moduleInfo.stableVersion.versionId === versionId}
+							isLatestPrerelease={
+								!!moduleInfo.prereleaseVersion && moduleInfo.prereleaseVersion.versionId === versionId
+							}
+						/>
+					)
+				})}
 				{/* {hiddenCount > 0 && (
 			<tr>
 				<td colSpan={4} style={{ padding: '10px 5px' }}>
@@ -117,6 +114,12 @@ export const ModuleVersionsTable = observer(function ModuleVersionsTable({
 		</table>
 	)
 })
+
+interface VisibleVersionsState {
+	availableStable: boolean
+	availableDeprecated: boolean
+	availablePrerelease: boolean
+}
 
 interface ModuleVersionRowProps {
 	moduleId: string
@@ -153,6 +156,7 @@ const ModuleVersionRow = observer(function ModuleVersionRow({
 			</td>
 			<td>
 				{versionId}
+				{storeInfo?.isPrerelease && <FontAwesomeIcon icon={faQuestion} title="Prerelease" />}
 				{storeInfo?.deprecationReason && <FontAwesomeIcon icon={faWarning} title="Deprecated" />}
 			</td>
 			<td>{storeInfo?.releasedAt ? new Date(storeInfo?.releasedAt).toDateString() : 'Unknown'}</td>

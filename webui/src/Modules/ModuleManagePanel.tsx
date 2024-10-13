@@ -1,40 +1,12 @@
-import React, { useCallback, useContext, useEffect, useMemo, useState, version } from 'react'
-import { ConnectionsContext, LoadingRetryOrError, socketEmitPromise } from '../util.js'
-import { CRow, CCol, CButton, CFormSelect, CAlert } from '@coreui/react'
-import { TextInputField } from '../Components/index.js'
-import { nanoid } from 'nanoid'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-	faLock,
-	faPlug,
-	faPlus,
-	faQuestion,
-	faQuestionCircle,
-	faStar,
-	faSync,
-	faToiletsPortable,
-	faTrash,
-	faWarning,
-} from '@fortawesome/free-solid-svg-icons'
-import { isLabelValid } from '@companion-app/shared/Label.js'
-import { ClientConnectionConfig } from '@companion-app/shared/Model/Common.js'
-import { useOptionsAndIsVisible } from '../Hooks/useOptionsAndIsVisible.js'
-import { ExtendedInputField } from '@companion-app/shared/Model/Options.js'
+import React, { useContext, useEffect, useState } from 'react'
+import { socketEmitPromise } from '../util.js'
+import { CRow, CCol } from '@coreui/react'
 import { RootAppStoreContext } from '../Stores/RootAppStore.js'
 import { observer } from 'mobx-react-lite'
-import type {
-	ModuleVersionInfo,
-	ModuleVersionMode,
-	NewClientModuleInfo,
-	NewClientModuleVersionInfo2,
-} from '@companion-app/shared/Model/ModuleInfo.js'
-import { ModuleStoreModuleInfoStore, ModuleStoreModuleInfoVersion } from '@companion-app/shared/Model/ModulesStore.js'
+import type { NewClientModuleInfo, NewClientModuleVersionInfo2 } from '@companion-app/shared/Model/ModuleInfo.js'
+import { ModuleStoreModuleInfoStore } from '@companion-app/shared/Model/ModulesStore.js'
 import { RefreshModuleInfo } from './RefreshModuleInfo.js'
-import semver from 'semver'
-import { faDochub } from '@fortawesome/free-brands-svg-icons'
-import { toJS } from 'mobx'
 import { LastUpdatedTimestamp } from './LastUpdatedTimestamp.js'
-import { isModuleApiVersionCompatible } from '@companion-app/shared/ModuleApiVersionCheck.js'
 import { ModuleVersionsTable } from './ModuleVersionsTable.js'
 import { CustomModuleVersionsTable } from './CustomModuleVersionsTable.js'
 
@@ -88,37 +60,7 @@ const ModuleManagePanelInner = observer(function ModuleManagePanelInner({
 }: ModuleManagePanelInnerProps) {
 	const { socket } = useContext(RootAppStoreContext)
 
-	const [error, setError] = useState<string | null>(null)
-	const [reloadToken, setReloadToken] = useState(nanoid())
-
 	const moduleStoreInfo = useModuleStoreInfo(moduleId)
-
-	const doRetryConfigLoad = useCallback(() => setReloadToken(nanoid()), [])
-
-	/**
-	 * Store/builtin Versions table
-	 * sorted by version number
-	 * Install/uninstall button
-	 * plug icon indicating in use (hover for a count)
-	 * Icon indicating latest stable
-	 * Icon indicating latest prerelease
-	 * Indicate prerelease in version number field?
-	 * Options to filter to just installed/available
-	 *
-	 * Above table, show when info last refreshed, and a button to refresh
-	 * quick option to install latest?
-	 *
-	 * filter by installed/available with extra option to show deprecated (default hidden)
-	 *   also option to show prerelease (default hidden)
-	 *
-	 * should stable and prerelease be separate?
-	 *
-	 *
-	 * Separate table of 'custom' modules?
-	 * I am tempted to combine them, but as numbers can collide will that be confusing?
-	 *
-	 *
-	 */
 
 	return (
 		<div>
