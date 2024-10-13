@@ -42,9 +42,9 @@ export interface ModuleStoreModuleInfoVersion {
 	releasedAt: number // unix timestamp
 
 	tarUrl: string | null
-	// deprecationReason: string | null
+	deprecationReason: string | null
 
-	// apiVersion: string // TODO
+	apiVersion: string
 
 	// TODO - more props
 }
