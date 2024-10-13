@@ -17,104 +17,20 @@
 
 import fs from 'fs-extra'
 import path from 'path'
-import { cloneDeep, compact } from 'lodash-es'
+import { cloneDeep } from 'lodash-es'
 import { InstanceModuleScanner } from './ModuleScanner.js'
 import LogController from '../Log/Controller.js'
 import type express from 'express'
 import { type ModuleManifest } from '@companion-module/base'
-import type {
-	ModuleDisplayInfo,
-	ModuleVersionMode,
-	NewClientModuleInfo,
-	NewClientModuleVersionInfo2,
-	NewClientModuleVersionInfo2Ext,
-} from '@companion-app/shared/Model/ModuleInfo.js'
+import type { ModuleVersionMode, NewClientModuleInfo } from '@companion-app/shared/Model/ModuleInfo.js'
 import type { ClientSocket, UIHandler } from '../UI/Handler.js'
 import type { HelpDescription } from '@companion-app/shared/Model/Common.js'
 import type { InstanceController } from './Controller.js'
-import semver from 'semver'
 import jsonPatch from 'fast-json-patch'
-import { ModuleDirs } from './types.js'
+import { ModuleDirs, SomeModuleVersionInfo } from './Types.js'
+import { InstanceModuleInfo } from './ModuleInfo.js'
 
 const ModulesRoom = 'modules'
-
-export interface ModuleVersionInfoBase {
-	basePath: string
-	helpPath: string | null
-	display: ModuleDisplayInfo
-	manifest: ModuleManifest
-	isPackaged: boolean
-}
-
-export interface ReleaseModuleVersionInfo extends ModuleVersionInfoBase {
-	type: 'release'
-	releaseType: 'stable' | 'prerelease'
-	versionId: string
-	isBuiltin: boolean
-}
-export interface DevModuleVersionInfo extends ModuleVersionInfoBase {
-	type: 'dev'
-	isPackaged: boolean
-}
-export interface CustomModuleVersionInfo extends ModuleVersionInfoBase {
-	type: 'custom'
-	versionId: string
-}
-export type SomeModuleVersionInfo = ReleaseModuleVersionInfo | DevModuleVersionInfo | CustomModuleVersionInfo
-
-class NewModuleInfo {
-	id: string
-
-	replacedByIds: string[] = []
-
-	// builtinModule: ReleaseModuleVersionInfo | null = null
-
-	devModule: DevModuleVersionInfo | null = null
-
-	releaseVersions: Record<string, ReleaseModuleVersionInfo | undefined> = {}
-	customVersions: Record<string, CustomModuleVersionInfo | undefined> = {}
-
-	constructor(id: string) {
-		this.id = id
-	}
-
-	getVersion(versionMode: ModuleVersionMode, versionId: string | null): SomeModuleVersionInfo | null {
-		switch (versionMode) {
-			case 'stable': {
-				if (this.devModule) return this.devModule
-
-				let latest: ReleaseModuleVersionInfo | null = null
-				for (const version of Object.values(this.releaseVersions)) {
-					if (!version || version.releaseType !== 'stable') continue
-					if (!latest || semver.compare(version.display.version, latest.display.version) > 0) {
-						latest = version
-					}
-				}
-
-				return latest
-			}
-			case 'prerelease': {
-				if (this.devModule) return this.devModule
-
-				let latest: ReleaseModuleVersionInfo | null = null
-				for (const version of Object.values(this.releaseVersions)) {
-					if (!version || version.releaseType !== 'prerelease') continue
-					if (!latest || semver.compare(version.display.version, latest.display.version) > 0) {
-						latest = version
-					}
-				}
-
-				return latest
-			}
-			case 'specific-version':
-				return versionId ? (this.releaseVersions[versionId] ?? null) : null
-			case 'custom':
-				return versionId ? (this.customVersions[versionId] ?? null) : null
-			default:
-				return null
-		}
-	}
-}
 
 export class InstanceModules {
 	readonly #logger = LogController.createLogger('Instance/Modules')
@@ -137,7 +53,7 @@ export class InstanceModules {
 	/**
 	 * Known module info
 	 */
-	readonly #knownModules = new Map<string, NewModuleInfo>()
+	readonly #knownModules = new Map<string, InstanceModuleInfo>()
 
 	// /**
 	//  * Module renames
@@ -159,6 +75,12 @@ export class InstanceModules {
 		api_router.get('/help/module/:moduleId/:versionMode/:versionId/*', this.#getHelpAsset)
 	}
 
+	/**
+	 * Parse and init a new module which has just been installed on disk
+	 * @param moduleDir Freshly installed module directory
+	 * @param mode Whether the module is a custom or release module
+	 * @param manifest The module's manifest
+	 */
 	async loadInstalledModule(moduleDir: string, mode: 'custom' | 'release', manifest: ModuleManifest): Promise<void> {
 		this.#logger.info(`New ${mode} module installed: ${manifest.id}`)
 
@@ -216,6 +138,12 @@ export class InstanceModules {
 		}
 	}
 
+	/**
+	 * Cleanup any uses of a module, so that it can be removed from disk
+	 * @param moduleId The module's id
+	 * @param mode Whether the module is a custom or release module
+	 * @param versionId The version of the module
+	 */
 	async uninstallModule(moduleId: string, mode: 'custom' | 'release', versionId: string): Promise<void> {
 		const moduleInfo = this.#knownModules.get(moduleId)
 		if (!moduleInfo) throw new Error('Module not found when removing version')
@@ -246,10 +174,10 @@ export class InstanceModules {
 	/**
 	 *
 	 */
-	#getOrCreateModuleEntry(id: string): NewModuleInfo {
+	#getOrCreateModuleEntry(id: string): InstanceModuleInfo {
 		let moduleInfo = this.#knownModules.get(id)
 		if (!moduleInfo) {
-			moduleInfo = new NewModuleInfo(id)
+			moduleInfo = new InstanceModuleInfo(id)
 			this.#knownModules.set(id, moduleInfo)
 		}
 		return moduleInfo
@@ -492,35 +420,18 @@ export class InstanceModules {
 	getModulesJson(): Record<string, NewClientModuleInfo> {
 		const result: Record<string, NewClientModuleInfo> = {}
 
-		for (const [id, module] of this.#knownModules.entries()) {
-			const stableVersion = module.getVersion('stable', null)
-			const prereleaseVersion = module.getVersion('prerelease', null)
+		for (const [id, moduleInfo] of this.#knownModules.entries()) {
+			const clientModuleInfo = moduleInfo.toClientJson()
+			if (!clientModuleInfo) continue
 
-			const baseVersion =
-				stableVersion ??
-				prereleaseVersion ??
-				Object.values(module.releaseVersions)[0] ??
-				Object.values(module.customVersions)[0]
-			if (!baseVersion) continue
-
-			result[id] = {
-				baseInfo: baseVersion.display,
-
-				hasDevVersion: !!module.devModule,
-
-				stableVersion: translateStableVersion(stableVersion),
-				prereleaseVersion: translatePrereleaseVersion(prereleaseVersion),
-
-				releaseVersions: compact(Object.values(module.releaseVersions)).map(translateReleaseVersion),
-				customVersions: compact(Object.values(module.customVersions)).map(translateCustomVersion),
-			}
+			result[id] = clientModuleInfo
 		}
 
 		return result
 	}
 
 	/**
-	 *
+	 * Get the manifest for a module
 	 */
 	getModuleManifest(
 		moduleId: string,
@@ -531,7 +442,7 @@ export class InstanceModules {
 	}
 
 	/**
-	 *
+	 * Check whether a module is known and has a version installed
 	 */
 	hasModule(moduleId: string): boolean {
 		return this.#knownModules.has(moduleId)
@@ -599,97 +510,5 @@ export class InstanceModules {
 
 		// Try next handler
 		next()
-	}
-}
-
-function translateStableVersion(version: SomeModuleVersionInfo | null): NewClientModuleVersionInfo2Ext | null {
-	if (!version) return null
-	if (version.type === 'dev') {
-		return {
-			displayName: 'Latest Stable (Dev)',
-			isLegacy: false,
-			isDev: true,
-			isBuiltin: false,
-			hasHelp: version.helpPath !== null,
-			version: {
-				mode: 'stable',
-				id: null,
-			},
-			versionId: 'dev',
-		}
-	} else if (version.type === 'release') {
-		return {
-			displayName: `Latest Stable (v${version.versionId})`,
-			isLegacy: version.display.isLegacy ?? false,
-			isDev: false,
-			isBuiltin: version.isBuiltin,
-			hasHelp: version.helpPath !== null,
-			version: {
-				mode: 'stable',
-				id: null,
-			},
-			versionId: version.versionId,
-		}
-	}
-	return null
-}
-
-function translatePrereleaseVersion(version: SomeModuleVersionInfo | null): NewClientModuleVersionInfo2Ext | null {
-	if (!version) return null
-	if (version.type === 'dev') {
-		return {
-			displayName: 'Latest Prerelease (Dev)',
-			isLegacy: false,
-			isDev: true,
-			isBuiltin: false,
-			hasHelp: version.helpPath !== null,
-			version: {
-				mode: 'prerelease',
-				id: null,
-			},
-			versionId: 'dev',
-		}
-	} else if (version.type === 'release') {
-		return {
-			displayName: `Latest Prerelease (v${version.versionId})`,
-			isLegacy: version.display.isLegacy ?? false,
-			isDev: false,
-			isBuiltin: version.isBuiltin,
-			hasHelp: version.helpPath !== null,
-			version: {
-				mode: 'prerelease',
-				id: null,
-			},
-			versionId: version.versionId,
-		}
-	}
-	return null
-}
-
-function translateReleaseVersion(version: ReleaseModuleVersionInfo): NewClientModuleVersionInfo2 {
-	return {
-		displayName: `v${version.versionId}`,
-		isLegacy: version.display.isLegacy ?? false,
-		isDev: false,
-		isBuiltin: version.isBuiltin,
-		hasHelp: version.helpPath !== null,
-		version: {
-			mode: 'specific-version',
-			id: version.versionId,
-		},
-	}
-}
-
-function translateCustomVersion(version: CustomModuleVersionInfo): NewClientModuleVersionInfo2 {
-	return {
-		displayName: `Custom XXX v${version.versionId}`,
-		isLegacy: false,
-		isDev: false,
-		isBuiltin: false,
-		hasHelp: version.helpPath !== null,
-		version: {
-			mode: 'custom',
-			id: version.versionId,
-		},
 	}
 }

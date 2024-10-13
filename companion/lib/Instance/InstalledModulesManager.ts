@@ -8,7 +8,7 @@ import * as ts from 'tar-stream'
 import { Readable } from 'node:stream'
 import { ModuleManifest } from '@companion-module/base'
 import * as tarfs from 'tar-fs'
-import type { ModuleDirs } from './types.js'
+import type { ModuleDirs } from './Types.js'
 import type { ModuleStoreService } from './ModuleStore.js'
 import { promisify } from 'util'
 
