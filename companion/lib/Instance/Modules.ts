@@ -28,7 +28,7 @@ import type { HelpDescription } from '@companion-app/shared/Model/Common.js'
 import type { InstanceController } from './Controller.js'
 import jsonPatch from 'fast-json-patch'
 import type { ModuleDirs, SomeModuleVersionInfo } from './Types.js'
-import type { InstanceModuleInfo } from './ModuleInfo.js'
+import { InstanceModuleInfo } from './ModuleInfo.js'
 
 const ModulesRoom = 'modules'
 

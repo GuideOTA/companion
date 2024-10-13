@@ -21,8 +21,6 @@ export class InstanceModuleInfo {
 
 	replacedByIds: string[] = []
 
-	// builtinModule: ReleaseModuleVersionInfo | null = null
-
 	devModule: DevModuleVersionInfo | null = null
 
 	releaseVersions: Record<string, ReleaseModuleVersionInfo | undefined> = {}

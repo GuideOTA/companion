@@ -1,4 +1,4 @@
-import { ModuleVersionMode } from './ModuleInfo.js'
+import type { ModuleVersionMode } from './ModuleInfo.js'
 import type { ExtendedInputField, InternalActionInputField } from './Options.js'
 import type { Operation as JsonPatchOperation } from 'fast-json-patch'
 

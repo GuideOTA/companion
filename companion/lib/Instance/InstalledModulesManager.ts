@@ -16,13 +16,21 @@ const gunzipP = promisify(zlib.gunzip)
 
 const MAX_MODULE_TAR_SIZE = 1024 * 1024 * 10 // 50MB
 
+/**
+ * This class manages the installed modules for an instance
+ * It handles installing and uninstalling modules
+ */
 export class InstanceInstalledModulesManager {
 	readonly #logger = LogController.createLogger('Instance/UserModulesManager')
 
 	/**
+	 * The modules manager. To be notified when a module is installed or uninstalled
 	 */
 	readonly #modulesManager: InstanceModules
 
+	/**
+	 * The store service. To get information about modules when installing from the store
+	 */
 	readonly #modulesStore: ModuleStoreService
 
 	/**
