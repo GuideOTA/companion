@@ -10,6 +10,7 @@ import { ModuleManifest } from '@companion-module/base'
 import * as tarfs from 'tar-fs'
 import type { ModuleDirs } from './Types.js'
 import type { ModuleStoreService } from './ModuleStore.js'
+import type { AppInfo } from '../Registry.js'
 import { promisify } from 'util'
 
 const gunzipP = promisify(zlib.gunzip)
@@ -22,6 +23,8 @@ const MAX_MODULE_TAR_SIZE = 1024 * 1024 * 10 // 50MB
  */
 export class InstanceInstalledModulesManager {
 	readonly #logger = LogController.createLogger('Instance/UserModulesManager')
+
+	readonly #appInfo: AppInfo
 
 	/**
 	 * The modules manager. To be notified when a module is installed or uninstalled
@@ -43,7 +46,8 @@ export class InstanceInstalledModulesManager {
 	 */
 	readonly #customModulesDir: string
 
-	constructor(modulesManager: InstanceModules, modulesStore: ModuleStoreService, dirs: ModuleDirs) {
+	constructor(appInfo: AppInfo, modulesManager: InstanceModules, modulesStore: ModuleStoreService, dirs: ModuleDirs) {
+		this.#appInfo = appInfo
 		this.#modulesManager = modulesManager
 		this.#modulesStore = modulesStore
 		this.#storeModulesDir = dirs.storeModulesDir
@@ -113,14 +117,19 @@ export class InstanceInstalledModulesManager {
 				return `Module ${moduleId} v${moduleVersion} not found`
 			}
 
-			if (!versionInfo.tarUrl) throw new Error('Module version info is missing tarUrl')
+			if (!versionInfo.tarUrl) {
+				this.#logger.error(`Module ${moduleId} v${moduleVersion} has no download URL`)
+				return `Module ${moduleId} v${moduleVersion} has no download URL`
+			}
 
 			const timeBeforeDownload = Date.now()
 
 			const abortControl = new AbortController()
 			const response = await fetch(versionInfo.tarUrl, {
 				headers: {
-					'User-Agent': 'Companion', // TODO - fill out more
+					'User-Agent': `Companion ${this.#appInfo.appVersion}`,
+					'Companion-App-Build': this.#appInfo.appBuild,
+					'Companion-App-Version': this.#appInfo.appVersion,
 				},
 				signal: abortControl.signal,
 			})
@@ -133,7 +142,8 @@ export class InstanceInstalledModulesManager {
 				bytesReceived += chunk.byteLength
 				if (bytesReceived > MAX_MODULE_TAR_SIZE) {
 					abortControl.abort()
-					throw new Error(`Module too large to download safely`)
+					this.#logger.error(`Module too large to download safely`)
+					return 'Module is too large to download safely'
 				}
 				chunks.push(chunk)
 			}
