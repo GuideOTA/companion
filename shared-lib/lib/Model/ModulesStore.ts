@@ -15,6 +15,8 @@ export interface ModuleStoreListCacheEntry {
 	storeUrl: string
 	githubUrl: string | null
 
+	deprecationReason: string | null
+
 	// description: string | null
 
 	// licenseSPDX: string

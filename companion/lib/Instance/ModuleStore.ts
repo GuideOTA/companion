@@ -200,6 +200,8 @@ const tmpStoreListData: Record<string, ModuleStoreListCacheEntry> = {
 
 		storeUrl: 'https://bitfocus.io/connections/bmd-atem',
 		githubUrl: 'https://github.com/bitfocus/companion-module-bmd-atem',
+
+		deprecationReason: null,
 	},
 }
 for (let i = 0; i < 20; i++) {
@@ -212,6 +214,8 @@ for (let i = 0; i < 20; i++) {
 
 		storeUrl: 'https://bitfocus.io/connections/test',
 		githubUrl: null,
+
+		deprecationReason: null,
 	}
 }
 
