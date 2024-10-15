@@ -8,6 +8,7 @@ import type {
 } from '@companion-app/shared/Model/ModulesStore.js'
 import type { DataCache } from '../Data/Cache.js'
 import { cloneDeep } from 'lodash-es'
+import semver from 'semver'
 
 const ModuleStoreListRoom = 'module-store:list'
 const ModuleStoreInfoRoom = (moduleId: string) => `module-store:info:${moduleId}`
@@ -91,7 +92,9 @@ export class ModuleStoreService {
 		})
 
 		client.onPromise('modules-store:info:refresh', async (moduleId) => {
-			this.#refreshStoreInfoData(moduleId)
+			this.#refreshStoreInfoData(moduleId).catch((e) => {
+				this.#logger.error(`Failed to refresh store info for module "${moduleId}": ${e}`)
+			})
 		})
 
 		client.onPromise('modules-store:info:subscribe', async (moduleId) => {
@@ -101,7 +104,9 @@ export class ModuleStoreService {
 
 			// Check if the data is stale enough to refresh
 			if (!data || data.lastUpdated < Date.now() - SUBSCRIBE_REFRESH_INTERVAL) {
-				this.#refreshStoreInfoData(moduleId)
+				this.#refreshStoreInfoData(moduleId).catch((e) => {
+					this.#logger.error(`Failed to refresh store info for module "${moduleId}": ${e}`)
+				})
 			}
 
 			return data
@@ -118,6 +123,18 @@ export class ModuleStoreService {
 		if (!moduleInfo) return null
 
 		return moduleInfo.versions.find((v) => v.id === versionId) ?? null
+	}
+
+	async fetchLatestModuleVersionInfo(moduleId: string): Promise<ModuleStoreModuleInfoVersion | null> {
+		// Get the cached module info
+		const moduleInfo = this.#getCacheEntryForModule(moduleId)
+		if (!moduleInfo) return null
+
+		// Assume nothing is cached, as there may be no versions
+		const versionData = await this.#refreshStoreInfoData(moduleId)
+		if (!versionData) return null
+
+		return getLatestModuleVersionInfo(versionData.versions)
 	}
 
 	#isRefreshingStoreData = false
@@ -172,68 +189,73 @@ export class ModuleStoreService {
 	}
 
 	readonly #isRefreshingStoreInfo = new Set<string>()
-	#refreshStoreInfoData(moduleId: string): void {
+	async #refreshStoreInfoData(moduleId: string): Promise<ModuleStoreModuleInfoStore | null> {
 		if (this.#isRefreshingStoreInfo.has(moduleId)) {
 			this.#logger.debug(`Skipping refreshing store info for module "${moduleId}", already in progress`)
-			return
+			return null
 		}
 		this.#isRefreshingStoreInfo.add(moduleId)
 
 		this.#logger.debug(`Refreshing store info for module "${moduleId}"`)
 
-		Promise.resolve()
-			.then(async () => {
-				this.#io.emit('modules-store:info:progress', moduleId, 0)
+		let data: ModuleStoreModuleInfoStore
+		try {
+			this.#io.emit('modules-store:info:progress', moduleId, 0)
 
-				// Simulate a delay
-				await new Promise((resolve) => setTimeout(resolve, 1000))
-				this.#io.emit('modules-store:info:progress', moduleId, 0.2)
-				await new Promise((resolve) => setTimeout(resolve, 1000))
+			// Simulate a delay
+			await new Promise((resolve) => setTimeout(resolve, 1000))
+			this.#io.emit('modules-store:info:progress', moduleId, 0.2)
+			await new Promise((resolve) => setTimeout(resolve, 1000))
 
-				const data: ModuleStoreModuleInfoStore = {
-					id: moduleId,
-					lastUpdated: Date.now(),
-					lastUpdateAttempt: Date.now(),
-					updateWarning: null,
+			data = {
+				id: moduleId,
+				lastUpdated: Date.now(),
+				lastUpdateAttempt: Date.now(),
+				updateWarning: null,
 
-					versions: cloneDeep(tmpStoreVersionsData),
-				}
+				versions: cloneDeep(tmpStoreVersionsData),
+			}
+		} catch (e: any) {
+			// This could be on an always offline system
 
-				return data
-			})
-			.catch((e) => {
-				// This could be on an always offline system
+			this.#logger.warn(`Refreshing store info for module "${moduleId}" failed: ${e?.message ?? e}`)
 
-				this.#logger.warn(`Refreshing store info for module "${moduleId}" failed: ${e?.message ?? e}`)
+			data = this.#infoStore.get(moduleId) ?? {
+				id: moduleId,
+				lastUpdated: 0,
+				lastUpdateAttempt: Date.now(),
+				updateWarning: null,
 
-				const data = this.#infoStore.get(moduleId) ?? {
-					id: moduleId,
-					lastUpdated: 0,
-					lastUpdateAttempt: Date.now(),
-					updateWarning: null,
+				versions: [],
+			}
 
-					versions: [],
-				}
+			data.lastUpdateAttempt = Date.now()
+			data.updateWarning = 'Failed to update the module version list from the store'
+		}
 
-				data.lastUpdateAttempt = Date.now()
-				data.updateWarning = 'Failed to update the module version list from the store'
+		// Store value and update the cache on disk
+		this.#infoStore.set(moduleId, data)
+		this.#cacheStore.setTableKey(CacheStoreModuleTable, moduleId, data)
 
-				return data
-			})
-			.then((data: ModuleStoreModuleInfoStore) => {
-				// Store value and update the cache on disk
-				this.#infoStore.set(moduleId, data)
-				this.#cacheStore.setTableKey(CacheStoreModuleTable, moduleId, data)
+		// Update clients
+		this.#io.emitToRoom(ModuleStoreInfoRoom(moduleId), 'modules-store:info:data', moduleId, data)
+		this.#io.emit('modules-store:info:progress', moduleId, 1)
 
-				// Update clients
-				this.#io.emitToRoom(ModuleStoreInfoRoom(moduleId), 'modules-store:info:data', moduleId, data)
-				this.#io.emit('modules-store:info:progress', moduleId, 1)
+		this.#isRefreshingStoreInfo.delete(moduleId)
 
-				this.#isRefreshingStoreInfo.delete(moduleId)
+		this.#logger.debug(`Done refreshing store info for module "${moduleId}"`)
 
-				this.#logger.debug(`Done refreshing store info for module "${moduleId}"`)
-			})
+		return data
 	}
+}
+
+function getLatestModuleVersionInfo(versions: ModuleStoreModuleInfoVersion[]): ModuleStoreModuleInfoVersion | null {
+	return versions.reduce<ModuleStoreModuleInfoVersion | null>((latest, version) => {
+		if (!version.tarUrl) return latest
+		if (!latest) return version
+		if (semver.gt(version.id, latest.id)) return version
+		return latest
+	}, null)
 }
 
 const tmpStoreListData: Record<string, ModuleStoreListCacheEntry> = {

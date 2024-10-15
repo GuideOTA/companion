@@ -12,6 +12,7 @@ import type { ModuleDirs } from './Types.js'
 import type { ModuleStoreService } from './ModuleStore.js'
 import type { AppInfo } from '../Registry.js'
 import { promisify } from 'util'
+import { ModuleStoreModuleInfoVersion } from '@companion-app/shared/Model/ModulesStore.js'
 
 const gunzipP = promisify(zlib.gunzip)
 
@@ -101,15 +102,7 @@ export class InstanceInstalledModulesManager {
 		})
 
 		client.onPromise('modules:install-store-module', async (moduleId, moduleVersion) => {
-			this.#logger.debug('modules:install-store-module', moduleId, moduleVersion)
-
 			this.#logger.info(`Installing ${moduleId} v${moduleVersion} from store`)
-
-			const moduleDir = path.join(this.#storeModulesDir, `${moduleId}-${moduleVersion}`)
-			if (fs.existsSync(moduleDir)) {
-				this.#logger.warn(`Module ${moduleId} v${moduleVersion} already exists on disk`)
-				return `Module ${moduleId} v${moduleVersion} already exists`
-			}
 
 			const versionInfo = this.#modulesStore.getCachedModuleVersionInfo(moduleId, moduleVersion)
 			if (!versionInfo) {
@@ -117,80 +110,102 @@ export class InstanceInstalledModulesManager {
 				return `Module ${moduleId} v${moduleVersion} not found`
 			}
 
-			if (!versionInfo.tarUrl) {
-				this.#logger.error(`Module ${moduleId} v${moduleVersion} has no download URL`)
-				return `Module ${moduleId} v${moduleVersion} has no download URL`
-			}
-
-			const timeBeforeDownload = Date.now()
-
-			const abortControl = new AbortController()
-			const response = await fetch(versionInfo.tarUrl, {
-				headers: {
-					'User-Agent': `Companion ${this.#appInfo.appVersion}`,
-					'Companion-App-Build': this.#appInfo.appBuild,
-					'Companion-App-Version': this.#appInfo.appVersion,
-				},
-				signal: abortControl.signal,
-			})
-			if (!response.body) throw new Error('Failed to fetch module, got no body')
-
-			// Download into memory with a size limit
-			const chunks: Uint8Array[] = []
-			let bytesReceived = 0
-			for await (const chunk of response.body as ReadableStream<Uint8Array>) {
-				bytesReceived += chunk.byteLength
-				if (bytesReceived > MAX_MODULE_TAR_SIZE) {
-					abortControl.abort()
-					this.#logger.error(`Module too large to download safely`)
-					return 'Module is too large to download safely'
-				}
-				chunks.push(chunk)
-			}
-
-			this.#logger.info(
-				`Downloaded ${moduleId} v${moduleVersion} in ${Date.now() - timeBeforeDownload}ms (${bytesReceived} bytes)`
-			)
-
-			const decompressedData = await gunzipP(Buffer.concat(chunks))
-			if (!decompressedData) {
-				this.#logger.error(`Failed to decompress module data`)
-				return 'Failed to decompress data'
-			}
-
-			const manifestJson = await extractManifestFromTar(decompressedData).catch((e) => {
-				this.#logger.error(`Failed to extract manifest from module`, e)
-			})
-			if (!manifestJson) {
-				this.#logger.warn(`Failed to find manifest in module archive`)
-				return "Doesn't look like a valid module, missing manifest"
-			}
-
-			if (manifestJson.name !== moduleId || manifestJson.version !== moduleVersion) {
-				this.#logger.warn('Module manifest does not match requested module')
-				return 'Module manifest does not match requested module'
-			}
-
-			return this.#installModuleFromTarBuffer(
-				'release',
-				moduleDir,
-				manifestJson,
-				decompressedData,
-				versionInfo.isPrerelease
-			)
+			return this.#installModuleVersionFromStore(moduleId, versionInfo)
 		})
 
 		client.onPromise('modules:install-store-module:latest', async (moduleId) => {
-			this.#logger.debug('modules:install-store-module:latest', moduleId)
+			this.#logger.info(`Installing latest version of module ${moduleId}`)
 
-			// TODO - implement
+			const versionInfo = await this.#modulesStore.fetchLatestModuleVersionInfo(moduleId)
+			if (!versionInfo) {
+				this.#logger.warn(`Unable to install latest version of ${moduleId}, it is not known in the store`)
+				return `Latest version of module "${moduleId}" not found`
+			}
 
-			return 'Not implemented'
+			this.#logger.info(`Installing ${moduleId} v${versionInfo} from store`)
+
+			return this.#installModuleVersionFromStore(moduleId, versionInfo)
 		})
 
 		client.onPromise('modules:uninstall-store-module', async (moduleId, versionId) => {
 			return this.#uninstallModule('release', this.#storeModulesDir, moduleId, versionId)
 		})
+	}
+
+	async #installModuleVersionFromStore(
+		moduleId: string,
+		versionInfo: ModuleStoreModuleInfoVersion
+	): Promise<string | null> {
+		const moduleVersion = versionInfo.id
+
+		const moduleDir = path.join(this.#storeModulesDir, `${moduleId}-${moduleVersion}`)
+		if (fs.existsSync(moduleDir)) {
+			this.#logger.warn(`Module ${moduleId} v${moduleVersion} already exists on disk`)
+			return `Module ${moduleId} v${moduleVersion} already exists`
+		}
+
+		if (!versionInfo.tarUrl) {
+			this.#logger.error(`Module ${moduleId} v${moduleVersion} has no download URL`)
+			return `Module ${moduleId} v${moduleVersion} has no download URL`
+		}
+
+		const timeBeforeDownload = Date.now()
+
+		const abortControl = new AbortController()
+		const response = await fetch(versionInfo.tarUrl, {
+			headers: {
+				'User-Agent': `Companion ${this.#appInfo.appVersion}`,
+				'Companion-App-Build': this.#appInfo.appBuild,
+				'Companion-App-Version': this.#appInfo.appVersion,
+				'Companion-Machine-Id': this.#appInfo.machineId,
+			},
+			signal: abortControl.signal,
+		})
+		if (!response.body) throw new Error('Failed to fetch module, got no body')
+
+		// Download into memory with a size limit
+		const chunks: Uint8Array[] = []
+		let bytesReceived = 0
+		for await (const chunk of response.body as ReadableStream<Uint8Array>) {
+			bytesReceived += chunk.byteLength
+			if (bytesReceived > MAX_MODULE_TAR_SIZE) {
+				abortControl.abort()
+				this.#logger.error(`Module too large to download safely`)
+				return 'Module is too large to download safely'
+			}
+			chunks.push(chunk)
+		}
+
+		this.#logger.info(
+			`Downloaded ${moduleId} v${moduleVersion} in ${Date.now() - timeBeforeDownload}ms (${bytesReceived} bytes)`
+		)
+
+		const decompressedData = await gunzipP(Buffer.concat(chunks))
+		if (!decompressedData) {
+			this.#logger.error(`Failed to decompress module data`)
+			return 'Failed to decompress data'
+		}
+
+		const manifestJson = await extractManifestFromTar(decompressedData).catch((e) => {
+			this.#logger.error(`Failed to extract manifest from module`, e)
+		})
+		if (!manifestJson) {
+			this.#logger.warn(`Failed to find manifest in module archive`)
+			return "Doesn't look like a valid module, missing manifest"
+		}
+
+		if (manifestJson.name !== moduleId || manifestJson.version !== moduleVersion) {
+			this.#logger.warn('Module manifest does not match requested module')
+			return 'Module manifest does not match requested module'
+		}
+
+		return this.#installModuleFromTarBuffer(
+			'release',
+			moduleDir,
+			manifestJson,
+			decompressedData,
+			versionInfo.isPrerelease
+		)
 	}
 
 	async #installModuleFromTarBuffer(

@@ -21,14 +21,21 @@ interface DiscoverModulesPanelProps {
 export const DiscoverModulesPanel = observer(function DiscoverModulesPanel({
 	doManageModule,
 }: DiscoverModulesPanelProps) {
-	const { socket } = useContext(RootAppStoreContext)
+	const { socket, notifier } = useContext(RootAppStoreContext)
 
 	const moduleStoreCache = useModuleStoreList()
 
 	const doInstallLatestModule = useCallback((moduleId: string) => {
-		socketEmitPromise(socket, 'modules:install-store-module:latest', [moduleId]).catch((err) => {
-			console.error('Failed to install module', err)
-		})
+		socketEmitPromise(socket, 'modules:install-store-module:latest', [moduleId])
+			.then((failureReason) => {
+				if (failureReason) {
+					console.error('Failed to install module', failureReason)
+					notifier.current?.show('Failed to install module', failureReason, 5000)
+				}
+			})
+			.catch((err) => {
+				console.error('Failed to install module', err)
+			})
 	}, [])
 
 	const [filter, setFilter] = useState('')
