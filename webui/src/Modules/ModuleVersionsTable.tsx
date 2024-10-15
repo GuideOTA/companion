@@ -164,7 +164,11 @@ const ModuleVersionRow = observer(function ModuleVersionRow({
 				{storeInfo?.deprecationReason && <FontAwesomeIcon icon={faWarning} title="Deprecated" />}
 			</td>
 			<td>
-				Released <LastUpdatedTimestamp releasedAt={storeInfo?.releasedAt} />
+				{!!storeInfo && (
+					<>
+						Released <LastUpdatedTimestamp releasedAt={storeInfo.releasedAt} />
+					</>
+				)}
 			</td>
 			<td>
 				{isLatestStable && <FontAwesomeIcon icon={faStar} title="Latest stable" />}
@@ -200,14 +204,20 @@ interface ModuleUninstallButtonProps {
 }
 
 function ModuleUninstallButton({ moduleId, versionId, isBuiltin }: ModuleUninstallButtonProps) {
-	const { socket } = useContext(RootAppStoreContext)
+	const { socket, notifier } = useContext(RootAppStoreContext)
 
 	const [isRunningInstallOrUninstall, setIsRunningInstallOrUninstall] = useState(false)
-	// TODO - track and show error
 
 	const doRemove = useCallback(() => {
 		setIsRunningInstallOrUninstall(true)
 		socketEmitPromise(socket, 'modules:uninstall-store-module', [moduleId, versionId])
+			.then((failureReason) => {
+				if (failureReason) {
+					console.error('Failed to uninstall module', failureReason)
+
+					notifier.current?.show('Failed to uninstall module', failureReason, 5000)
+				}
+			})
 			.catch((err) => {
 				console.error('Failed to uninstall module', err)
 			})
@@ -239,14 +249,20 @@ interface ModuleInstallButtonProps {
 }
 
 function ModuleInstallButton({ moduleId, versionId, apiVersion, hasTarUrl }: ModuleInstallButtonProps) {
-	const { socket } = useContext(RootAppStoreContext)
+	const { socket, notifier } = useContext(RootAppStoreContext)
 
 	const [isRunningInstallOrUninstall, setIsRunningInstallOrUninstall] = useState(false)
-	// TODO - track and show error
 
 	const doInstall = useCallback(() => {
 		setIsRunningInstallOrUninstall(true)
 		socketEmitPromise(socket, 'modules:install-store-module', [moduleId, versionId])
+			.then((failureReason) => {
+				if (failureReason) {
+					console.error('Failed to install module', failureReason)
+
+					notifier.current?.show('Failed to install module', failureReason, 5000)
+				}
+			})
 			.catch((err) => {
 				console.error('Failed to install module', err)
 			})

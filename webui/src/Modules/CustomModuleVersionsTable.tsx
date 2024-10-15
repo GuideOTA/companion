@@ -84,14 +84,20 @@ interface ModuleUninstallButtonProps {
 }
 
 function ModuleUninstallButton({ moduleId, versionId }: ModuleUninstallButtonProps) {
-	const { socket } = useContext(RootAppStoreContext)
+	const { socket, notifier } = useContext(RootAppStoreContext)
 
 	const [isRunningInstallOrUninstall, setIsRunningInstallOrUninstall] = useState(false)
-	// TODO - track and show error
 
 	const doRemove = useCallback(() => {
 		setIsRunningInstallOrUninstall(true)
 		socketEmitPromise(socket, 'modules:uninstall-custom-module', [moduleId, versionId])
+			.then((failureReason) => {
+				if (failureReason) {
+					console.error('Failed to uninstall module', failureReason)
+
+					notifier.current?.show('Failed to uninstall module', failureReason, 5000)
+				}
+			})
 			.catch((err) => {
 				console.error('Failed to uninstall module', err)
 			})

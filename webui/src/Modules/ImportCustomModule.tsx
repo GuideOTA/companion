@@ -6,7 +6,7 @@ import { RootAppStoreContext } from '../Stores/RootAppStore.js'
 import { CAlert } from '@coreui/react'
 
 export function ImportCustomModule() {
-	const { socket } = useContext(RootAppStoreContext)
+	const { socket, notifier } = useContext(RootAppStoreContext)
 
 	const [importError, setImportError] = useState<string | null>(null)
 
@@ -34,17 +34,21 @@ export function ImportCustomModule() {
 
 				setImportError(null)
 				socketEmitPromise(socket, 'modules:install-custom-module', [new Uint8Array(fr.result)], 20000)
-					.then((err) => {
-						console.log('aaa', err)
+					.then((failureReason) => {
+						if (failureReason) {
+							console.error('Failed to install module', failureReason)
 
-						if (err) {
-							setImportError(err || 'Failed to prepare')
-						} else {
-							setImportError(null)
-							// const mode = config.type === 'page' ? 'import_page' : 'import_full'
-							// modalRef.current.show(mode, config, initialRemap)
-							// setImportInfo([config, initialRemap])
+							notifier.current?.show('Failed to install module', failureReason, 5000)
 						}
+
+						setImportError(null)
+						// if (err) {
+						// 	setImportError(err || 'Failed to prepare')
+						// } else {
+						// 	// const mode = config.type === 'page' ? 'import_page' : 'import_full'
+						// 	// modalRef.current.show(mode, config, initialRemap)
+						// 	// setImportInfo([config, initialRemap])
+						// }
 					})
 					.catch((e) => {
 						setImportError('Failed to load config to import')
