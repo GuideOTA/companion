@@ -87,8 +87,8 @@ export class InstanceController extends CoreBase<InstanceControllerEvents> {
 		const moduleDirs: ModuleDirs = {
 			bundledLegacyModulesDir: path.resolve(generatePath('modules')),
 			bundledModulesDir: path.resolve(generatePath('bundled-modules')),
-			storeModulesDir: path.join(registry.appInfo.configDir, 'store-modules'),
-			customModulesDir: path.join(registry.appInfo.configDir, 'custom-modules'),
+			storeModulesDir: path.join(registry.appInfo.modulesDir, 'store'),
+			customModulesDir: path.join(registry.appInfo.modulesDir, 'custom'),
 		}
 
 		this.definitions = new InstanceDefinitions(registry)
