@@ -93,6 +93,8 @@ export const DiscoverModulesPanel = observer(function DiscoverModulesPanel({
 				<RefreshModulesList />
 				<p>
 					<LastUpdatedTimestamp timestamp={moduleStoreCache?.lastUpdated} />
+
+					{moduleStoreCache?.updateWarning && <CAlert color="danger">{moduleStoreCache.updateWarning}</CAlert>}
 				</p>
 
 				<SearchBox filter={filter} setFilter={setFilter} />

@@ -41,6 +41,9 @@ export class ModuleStoreService {
 
 		this.#listStore = cacheStore.getKey(CacheStoreListKey, {
 			lastUpdated: 0,
+			lastUpdateAttempt: 0,
+			updateWarning: null,
+
 			modules: {},
 		} satisfies ModuleStoreListCacheStore)
 
@@ -119,8 +122,13 @@ export class ModuleStoreService {
 
 	#isRefreshingStoreData = false
 	refreshStoreListData(): void {
-		if (this.#isRefreshingStoreData) return
+		if (this.#isRefreshingStoreData) {
+			this.#logger.debug(`Skipping refreshing store module list, already in progress`)
+			return
+		}
 		this.#isRefreshingStoreData = true
+
+		this.#logger.debug(`Refreshing store module list`)
 
 		Promise.resolve()
 			.then(async () => {
@@ -136,27 +144,42 @@ export class ModuleStoreService {
 				// TODO - fetch and transform this from the api once it exists
 				this.#listStore = {
 					lastUpdated: Date.now(),
+					lastUpdateAttempt: Date.now(),
+					updateWarning: null,
+
 					modules: cloneDeep(tmpStoreListData),
 				}
-
-				this.#cacheStore.setKey(CacheStoreListKey, this.#listStore)
-
-				this.#io.emitToRoom(ModuleStoreListRoom, 'modules-store:list:data', this.#listStore)
-				this.#io.emit('modules-store:list:progress', 1)
 			})
 			.catch((e) => {
-				// TODO - what to do in this situation?
 				// This could be on an always offline system
+
+				this.#logger.warn(`Refreshing store module list failed: ${e?.message ?? e}`)
+
+				this.#listStore.lastUpdateAttempt = Date.now()
+				this.#listStore.updateWarning = 'Failed to update the module list from the store'
 			})
 			.finally(() => {
+				this.#cacheStore.setKey(CacheStoreListKey, this.#listStore)
+
+				// Update clients
+				this.#io.emitToRoom(ModuleStoreListRoom, 'modules-store:list:data', this.#listStore)
+				this.#io.emit('modules-store:list:progress', 1)
+
 				this.#isRefreshingStoreData = false
+
+				this.#logger.debug(`Done refreshing store module list`)
 			})
 	}
 
 	readonly #isRefreshingStoreInfo = new Set<string>()
 	#refreshStoreInfoData(moduleId: string): void {
-		if (this.#isRefreshingStoreInfo.has(moduleId)) return
+		if (this.#isRefreshingStoreInfo.has(moduleId)) {
+			this.#logger.debug(`Skipping refreshing store info for module "${moduleId}", already in progress`)
+			return
+		}
 		this.#isRefreshingStoreInfo.add(moduleId)
+
+		this.#logger.debug(`Refreshing store info for module "${moduleId}"`)
 
 		Promise.resolve()
 			.then(async () => {
@@ -170,22 +193,45 @@ export class ModuleStoreService {
 				const data: ModuleStoreModuleInfoStore = {
 					id: moduleId,
 					lastUpdated: Date.now(),
+					lastUpdateAttempt: Date.now(),
+					updateWarning: null,
 
 					versions: cloneDeep(tmpStoreVersionsData),
 				}
-				this.#infoStore.set(moduleId, data)
 
-				this.#cacheStore.setTableKey(CacheStoreModuleTable, moduleId, data)
-
-				this.#io.emitToRoom(ModuleStoreInfoRoom(moduleId), 'modules-store:info:data', moduleId, data)
-				this.#io.emit('modules-store:info:progress', moduleId, 1)
+				return data
 			})
 			.catch((e) => {
-				// TODO - what to do in this situation?
 				// This could be on an always offline system
+
+				this.#logger.warn(`Refreshing store info for module "${moduleId}" failed: ${e?.message ?? e}`)
+
+				const data = this.#infoStore.get(moduleId) ?? {
+					id: moduleId,
+					lastUpdated: 0,
+					lastUpdateAttempt: Date.now(),
+					updateWarning: null,
+
+					versions: [],
+				}
+
+				data.lastUpdateAttempt = Date.now()
+				data.updateWarning = 'Failed to update the module version list from the store'
+
+				return data
 			})
-			.finally(() => {
+			.then((data: ModuleStoreModuleInfoStore) => {
+				// Store value and update the cache on disk
+				this.#infoStore.set(moduleId, data)
+				this.#cacheStore.setTableKey(CacheStoreModuleTable, moduleId, data)
+
+				// Update clients
+				this.#io.emitToRoom(ModuleStoreInfoRoom(moduleId), 'modules-store:info:data', moduleId, data)
+				this.#io.emit('modules-store:info:progress', moduleId, 1)
+
 				this.#isRefreshingStoreInfo.delete(moduleId)
+
+				this.#logger.debug(`Done refreshing store info for module "${moduleId}"`)
 			})
 	}
 }

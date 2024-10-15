@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { socketEmitPromise } from '../util.js'
-import { CRow, CCol } from '@coreui/react'
+import { CRow, CCol, CAlert } from '@coreui/react'
 import { RootAppStoreContext } from '../Stores/RootAppStore.js'
 import { observer } from 'mobx-react-lite'
 import type { NewClientModuleInfo, NewClientModuleVersionInfo2 } from '@companion-app/shared/Model/ModuleInfo.js'
@@ -76,6 +76,8 @@ const ModuleManagePanelInner = observer(function ModuleManagePanelInner({
 			<RefreshModuleInfo moduleId={moduleId} />
 			<p>
 				<LastUpdatedTimestamp timestamp={moduleStoreInfo?.lastUpdated} />
+
+				{moduleStoreInfo?.updateWarning && <CAlert color="danger">{moduleStoreInfo.updateWarning}</CAlert>}
 			</p>
 
 			<h6>Versions</h6>

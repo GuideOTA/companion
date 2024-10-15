@@ -1,7 +1,8 @@
 export interface ModuleStoreListCacheStore {
 	lastUpdated: number
-	// lastUpdateAttempt: number
-	// updateMessage: string|null
+	lastUpdateAttempt: number
+	updateWarning: string | null
+
 	modules: Record<string, ModuleStoreListCacheEntry>
 }
 
@@ -32,8 +33,8 @@ export interface ModuleStoreModuleInfoStore {
 	id: string
 
 	lastUpdated: number
-	// lastUpdateAttempt: number
-	// updateMessage: string|null
+	lastUpdateAttempt: number
+	updateWarning: string | null
 
 	// TODO
 	versions: ModuleStoreModuleInfoVersion[]
