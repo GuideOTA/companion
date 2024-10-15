@@ -90,12 +90,14 @@ export const DiscoverModulesPanel = observer(function DiscoverModulesPanel({
 					on GitHub
 				</p>
 
-				<RefreshModulesList />
-				<p>
+				<div className="refresh-and-last-updated">
+					<RefreshModulesList />
 					<LastUpdatedTimestamp timestamp={moduleStoreCache?.lastUpdated} />
+				</div>
 
-					{moduleStoreCache?.updateWarning && <CAlert color="danger">{moduleStoreCache.updateWarning}</CAlert>}
-				</p>
+				{moduleStoreCache?.updateWarning && <CAlert color="danger">{moduleStoreCache.updateWarning}</CAlert>}
+
+				<br />
 
 				<SearchBox filter={filter} setFilter={setFilter} />
 				<br />

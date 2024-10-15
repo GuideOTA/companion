@@ -58,8 +58,6 @@ const ModuleManagePanelInner = observer(function ModuleManagePanelInner({
 	doManageModule,
 	showHelp,
 }: ModuleManagePanelInnerProps) {
-	const { socket } = useContext(RootAppStoreContext)
-
 	const moduleStoreInfo = useModuleStoreInfo(moduleId)
 
 	return (
@@ -73,12 +71,11 @@ const ModuleManagePanelInner = observer(function ModuleManagePanelInner({
 				)} */}
 			</h5>
 
-			<RefreshModuleInfo moduleId={moduleId} />
-			<p>
+			<div className="refresh-and-last-updated">
+				<RefreshModuleInfo moduleId={moduleId} />
 				<LastUpdatedTimestamp timestamp={moduleStoreInfo?.lastUpdated} />
-
-				{moduleStoreInfo?.updateWarning && <CAlert color="danger">{moduleStoreInfo.updateWarning}</CAlert>}
-			</p>
+			</div>
+			{moduleStoreInfo?.updateWarning && <CAlert color="danger">{moduleStoreInfo.updateWarning}</CAlert>}
 
 			<h6>Versions</h6>
 			<ModuleVersionsTable moduleInfo={moduleInfo} moduleStoreInfo={moduleStoreInfo} />
