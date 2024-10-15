@@ -20,6 +20,10 @@ import semver from 'semver'
 import { isModuleApiVersionCompatible } from '@companion-app/shared/ModuleApiVersionCheck.js'
 import { ModuleVersionUsageIcon } from './ModuleVersionUsageIcon.js'
 import { useTableVisibilityHelper, VisibilityButton } from '../Components/TableVisibility.js'
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime.js'
+
+dayjs.extend(relativeTime)
 
 interface ModuleVersionsTableProps {
 	moduleInfo: NewClientModuleInfo
@@ -159,7 +163,9 @@ const ModuleVersionRow = observer(function ModuleVersionRow({
 				{storeInfo?.isPrerelease && <FontAwesomeIcon icon={faQuestion} title="Prerelease" />}
 				{storeInfo?.deprecationReason && <FontAwesomeIcon icon={faWarning} title="Deprecated" />}
 			</td>
-			<td>{storeInfo?.releasedAt ? new Date(storeInfo?.releasedAt).toDateString() : 'Unknown'}</td>
+			<td>
+				Released <LastUpdatedTimestamp releasedAt={storeInfo?.releasedAt} />
+			</td>
 			<td>
 				{isLatestStable && <FontAwesomeIcon icon={faStar} title="Latest stable" />}
 				{isLatestPrerelease && <FontAwesomeIcon icon={faQuestion} title="Latest prerelease" />}
@@ -175,6 +181,17 @@ const ModuleVersionRow = observer(function ModuleVersionRow({
 		</tr>
 	)
 })
+
+function LastUpdatedTimestamp({ releasedAt }: { releasedAt: number | undefined }) {
+	let releaseStr = 'Unknown'
+	let titleStr: string | undefined = undefined
+	if (releasedAt !== undefined && releasedAt > 0) {
+		releaseStr = dayjs(releasedAt).fromNow()
+		titleStr = dayjs(releasedAt).format('YYYY-MM-DD')
+	}
+
+	return <span title={titleStr}>{releaseStr}</span>
+}
 
 interface ModuleUninstallButtonProps {
 	moduleId: string
