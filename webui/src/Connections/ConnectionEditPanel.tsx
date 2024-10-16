@@ -17,7 +17,7 @@ import type {
 	NewClientModuleInfo,
 	NewClientModuleVersionInfo2,
 } from '@companion-app/shared/Model/ModuleInfo.js'
-import { getConnectionVersionSelectOptions } from './AddConnection.js'
+import { getConnectionVersionSelectOptions } from './AddConnectionModal.js'
 import { getModuleVersionInfoForConnection } from './Util.js'
 
 interface ConnectionEditPanelProps {
