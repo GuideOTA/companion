@@ -86,7 +86,7 @@ const ModuleManagePanelInner = observer(function ModuleManagePanelInner({
 	)
 })
 
-function useModuleStoreInfo(moduleId: string): ModuleStoreModuleInfoStore | null {
+export function useModuleStoreInfo(moduleId: string | undefined): ModuleStoreModuleInfoStore | null {
 	// TODO - this needs to subscribe, even when this is not visible...
 
 	const { socket } = useContext(RootAppStoreContext)
@@ -94,6 +94,11 @@ function useModuleStoreInfo(moduleId: string): ModuleStoreModuleInfoStore | null
 	const [moduleStoreCache, setModuleStoreCache] = useState<ModuleStoreModuleInfoStore | null>(null)
 
 	useEffect(() => {
+		if (!moduleId) {
+			setModuleStoreCache(null)
+			return
+		}
+
 		let destroyed = false
 
 		setModuleStoreCache(null)

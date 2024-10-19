@@ -16,7 +16,6 @@ import { faQuestionCircle } from '@fortawesome/free-solid-svg-icons'
 import { ConnectionsContext, PreventDefaultHandler, socketEmitPromise } from '../util.js'
 import { RootAppStoreContext } from '../Stores/RootAppStore.js'
 import { observer } from 'mobx-react-lite'
-import { ModuleProductInfo } from '../Hooks/useFilteredProducts.js'
 import { CModalExt } from '../Components/CModalExt.js'
 import {
 	ModuleVersionInfo,
@@ -27,9 +26,11 @@ import { makeLabelSafe } from '@companion-app/shared/Label.js'
 import { ClientConnectionConfig } from '@companion-app/shared/Model/Common.js'
 import { getModuleVersionInfoForConnection } from './Util.js'
 import { DropdownChoiceInt } from '../LocalVariableDefinitions.js'
+import type { AddConnectionProduct } from './AddConnection.js'
+import { useModuleStoreInfo } from '../Modules/ModuleManagePanel.js'
 
 export interface AddConnectionModalRef {
-	show(info: ModuleProductInfo): void
+	show(info: AddConnectionProduct): void
 }
 
 interface AddConnectionModalProps {
@@ -46,12 +47,14 @@ export const AddConnectionModal = observer(
 		const connections = useContext(ConnectionsContext)
 
 		const [show, setShow] = useState(false)
-		const [moduleInfo, setModuleInfo] = useState<ModuleProductInfo | null>(null)
+		const [moduleInfo, setModuleInfo] = useState<AddConnectionProduct | null>(null)
 		const [selectedVersion, setSelectedVersion] = useState<ModuleVersionInfo>({
 			mode: 'stable',
 			id: null,
 		})
 		const [connectionLabel, setConnectionLabel] = useState<string>('')
+
+		const moduleStoreInfo = useModuleStoreInfo(moduleInfo?.id)
 
 		const doClose = useCallback(() => setShow(false), [])
 		const onClosed = useCallback(() => {
@@ -68,7 +71,7 @@ export const AddConnectionModal = observer(
 
 			socketEmitPromise(socket, 'connections:add', [
 				{
-					type: moduleInfo.baseInfo.id,
+					type: moduleInfo.id,
 					product: moduleInfo.product,
 				},
 				connectionLabel,
@@ -100,7 +103,7 @@ export const AddConnectionModal = observer(
 						mode: 'stable',
 						id: null,
 					})
-					setConnectionLabel(findNextConnectionLabel(connections, info))
+					setConnectionLabel(findNextConnectionLabel(connections, info.shortname))
 				},
 			}),
 			[connections]
@@ -109,20 +112,23 @@ export const AddConnectionModal = observer(
 		let selectedVersionIsLegacy = false
 		switch (selectedVersion.mode) {
 			case 'stable':
-				selectedVersionIsLegacy = moduleInfo?.stableVersion?.isLegacy ?? false
+				selectedVersionIsLegacy = moduleInfo?.installedInfo?.stableVersion?.isLegacy ?? false
 				break
 			case 'specific-version':
 				selectedVersionIsLegacy =
-					moduleInfo?.releaseVersions.find((v) => v.version.id === selectedVersion.id)?.isLegacy ?? false
+					moduleInfo?.installedInfo?.releaseVersions.find((v) => v.version.id === selectedVersion.id)?.isLegacy ?? false
 				break
 		}
 
-		const moduleVersion = getModuleVersionInfoForConnection(moduleInfo, {
+		const moduleVersion = getModuleVersionInfoForConnection(moduleInfo?.installedInfo, {
 			moduleVersionMode: selectedVersion.mode,
 			moduleVersionId: selectedVersion.id,
 		})
 
-		const versionOptions = useMemo(() => moduleInfo && getConnectionVersionSelectOptions(moduleInfo), [moduleInfo])
+		const versionOptions = useMemo(
+			() => moduleInfo?.installedInfo && getConnectionVersionSelectOptions(moduleInfo.installedInfo),
+			[moduleInfo]
+		)
 
 		// Ensure the currently selection version is a valid option
 		useEffect(() => {
@@ -145,7 +151,7 @@ export const AddConnectionModal = observer(
 					<>
 						<CModalHeader closeButton>
 							<h5>
-								Add {moduleInfo.baseInfo.manufacturer} {moduleInfo.product}
+								Add {moduleInfo.manufacturer} {moduleInfo.product}
 							</h5>
 						</CModalHeader>
 						<CModalBody>
@@ -169,7 +175,7 @@ export const AddConnectionModal = observer(
 								<CFormLabel htmlFor="colFormVersion" className="col-sm-4 col-form-label col-form-label-sm">
 									Module Version&nbsp;
 									{moduleVersion?.hasHelp && (
-										<div className="float_right" onClick={() => showHelp(moduleInfo.baseInfo.id, moduleVersion)}>
+										<div className="float_right" onClick={() => showHelp(moduleInfo.id, moduleVersion)}>
 											<FontAwesomeIcon icon={faQuestionCircle} />
 										</div>
 									)}
@@ -199,7 +205,7 @@ export const AddConnectionModal = observer(
 										</p>
 										<p>
 											If this module is broken, please let the module author know on{' '}
-											<a target="_blank" rel="noreferrer" href={moduleInfo.baseInfo.bugUrl}>
+											<a target="_blank" rel="noreferrer" href={moduleInfo.bugUrl}>
 												Github
 											</a>
 										</p>
@@ -216,7 +222,7 @@ export const AddConnectionModal = observer(
 								onClick={doAction}
 								disabled={!moduleInfo || !connectionLabel || !selectedVersion}
 							>
-								Save
+								Add
 							</CButton>
 						</CModalFooter>
 					</>
@@ -229,10 +235,10 @@ export const AddConnectionModal = observer(
 // nocommit TODO: this is a copy of the function from companion/lib/Instance/ConnectionConfigStore.ts
 function findNextConnectionLabel(
 	connections: Record<string, ClientConnectionConfig>,
-	info: ModuleProductInfo,
+	shortname: string,
 	ignoreId?: string
 ): string {
-	let prefix = info.baseInfo.shortname
+	let prefix = shortname
 
 	const knownLabels = new Set()
 	for (const [id, obj] of Object.entries(connections)) {

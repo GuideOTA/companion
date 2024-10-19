@@ -10,6 +10,7 @@ export interface ModuleStoreListCacheEntry {
 	id: string
 	name: string
 	manufacturer: string
+	shortname: string
 	products: string[]
 	keywords: string[]
 

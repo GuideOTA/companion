@@ -262,6 +262,7 @@ const tmpStoreListData: Record<string, ModuleStoreListCacheEntry> = {
 	'bmd-atem': {
 		id: 'bmd-atem',
 		name: 'Blackmagic: ATEM',
+		shortname: 'atem',
 		manufacturer: 'Blackmagic Design',
 		products: ['ATEM'],
 		keywords: ['blackmagic', 'atem', 'switcher'],
@@ -276,6 +277,7 @@ for (let i = 0; i < 20; i++) {
 	tmpStoreListData[`test-module-${i}`] = {
 		id: `test-module-${i}`,
 		name: `Test Module ${i}`,
+		shortname: 'test',
 		manufacturer: 'Test Manufacturer',
 		products: ['Test Product'],
 		keywords: ['test', 'module'],

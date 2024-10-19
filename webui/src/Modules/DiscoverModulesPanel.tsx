@@ -186,7 +186,7 @@ const StoreModuleEntry = observer(function StoreModuleEntry({
 	)
 })
 
-function useModuleStoreList(): ModuleStoreListCacheStore | null {
+export function useModuleStoreList(): ModuleStoreListCacheStore | null {
 	// TODO - this needs to subscribe, even when this is not visible...
 
 	const { socket } = useContext(RootAppStoreContext)
@@ -241,7 +241,6 @@ function useFilteredStoreProducts(
 
 	if (!filter) return allProducts
 
-	// TODO - this is giving low quality results now, need to improve
 	return fuzzySearch(filter, allProducts, {
 		keys: ['product', 'name', 'manufacturer', 'keywordsStr'],
 		threshold: -10_000,
