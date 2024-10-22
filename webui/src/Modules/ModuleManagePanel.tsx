@@ -8,7 +8,6 @@ import { ModuleStoreModuleInfoStore } from '@companion-app/shared/Model/ModulesS
 import { RefreshModuleInfo } from './RefreshModuleInfo.js'
 import { LastUpdatedTimestamp } from './LastUpdatedTimestamp.js'
 import { ModuleVersionsTable } from './ModuleVersionsTable.js'
-import { CustomModuleVersionsTable } from './CustomModuleVersionsTable.js'
 
 interface ModuleManagePanelProps {
 	moduleId: string
@@ -79,9 +78,6 @@ const ModuleManagePanelInner = observer(function ModuleManagePanelInner({
 
 			<h6>Versions</h6>
 			<ModuleVersionsTable moduleInfo={moduleInfo} moduleStoreInfo={moduleStoreInfo} />
-
-			<h6>Custom Versions</h6>
-			<CustomModuleVersionsTable moduleInfo={moduleInfo} />
 		</div>
 	)
 })

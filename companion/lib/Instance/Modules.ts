@@ -78,64 +78,32 @@ export class InstanceModules {
 	/**
 	 * Parse and init a new module which has just been installed on disk
 	 * @param moduleDir Freshly installed module directory
-	 * @param mode Whether the module is a custom or release module
 	 * @param manifest The module's manifest
 	 */
-	async loadInstalledModule(moduleDir: string, mode: 'custom' | 'release', manifest: ModuleManifest): Promise<void> {
-		this.#logger.info(`New ${mode} module installed: ${manifest.id}`)
+	async loadInstalledModule(moduleDir: string, manifest: ModuleManifest): Promise<void> {
+		this.#logger.info(`New module installed: ${manifest.id}`)
 
-		switch (mode) {
-			case 'custom': {
-				const customModule = await this.#moduleScanner.loadInfoForModule(moduleDir, false)
+		const loadedModuleInfo = await this.#moduleScanner.loadInfoForModule(moduleDir, false)
 
-				if (!customModule) throw new Error(`Failed to load custom module. Missing from disk at "${moduleDir}"`)
-				if (customModule?.manifest.id !== manifest.id)
-					throw new Error(`Mismatched module id: ${customModule?.manifest.id} !== ${manifest.id}`)
+		if (!loadedModuleInfo) throw new Error(`Failed to load installed module. Missing from disk at "${moduleDir}"`)
+		if (loadedModuleInfo?.manifest.id !== manifest.id)
+			throw new Error(`Mismatched module id: ${loadedModuleInfo?.manifest.id} !== ${manifest.id}`)
 
-				// Update the module info
-				const moduleInfo = this.#getOrCreateModuleEntry(manifest.id)
-				moduleInfo.customVersions[customModule.display.version] = {
-					...customModule,
-					type: 'custom',
-					versionId: customModule.display.version,
-				}
-
-				// Notify clients
-				this.#emitModuleUpdate(manifest.id)
-
-				// Ensure any modules using this version are started
-				await this.#instanceController.reloadUsesOfModule(manifest.id, 'custom', manifest.version)
-
-				break
-			}
-			case 'release': {
-				const storeModule = await this.#moduleScanner.loadInfoForModule(moduleDir, false)
-
-				if (!storeModule) throw new Error(`Failed to load store module. Missing from disk at "${moduleDir}"`)
-				if (storeModule?.manifest.id !== manifest.id)
-					throw new Error(`Mismatched module id: ${storeModule?.manifest.id} !== ${manifest.id}`)
-
-				// Update the module info
-				const moduleInfo = this.#getOrCreateModuleEntry(manifest.id)
-				moduleInfo.releaseVersions[storeModule.display.version] = {
-					...storeModule,
-					type: 'release',
-					versionId: storeModule.display.version,
-					releaseType: 'stable', // TODO - prerelease?
-					isBuiltin: false,
-				}
-
-				// Notify clients
-				this.#emitModuleUpdate(manifest.id)
-
-				// Ensure any modules using this version are started
-				await this.#instanceController.reloadUsesOfModule(manifest.id, 'release', manifest.version)
-
-				break
-			}
-			default:
-				this.#logger.info(`Unknown module type: ${mode}`)
+		// Update the module info
+		const moduleInfo = this.#getOrCreateModuleEntry(manifest.id)
+		moduleInfo.installedVersions[loadedModuleInfo.display.version] = {
+			...loadedModuleInfo,
+			type: 'release',
+			versionId: loadedModuleInfo.display.version,
+			releaseType: loadedModuleInfo.isPrerelease ? 'prerelease' : 'stable',
+			isBuiltin: false,
 		}
+
+		// Notify clients
+		this.#emitModuleUpdate(manifest.id)
+
+		// Ensure any modules using this version are started
+		await this.#instanceController.reloadUsesOfModule(manifest.id, 'release', manifest.version)
 	}
 
 	/**
@@ -144,31 +112,17 @@ export class InstanceModules {
 	 * @param mode Whether the module is a custom or release module
 	 * @param versionId The version of the module
 	 */
-	async uninstallModule(moduleId: string, mode: 'custom' | 'release', versionId: string): Promise<void> {
+	async uninstallModule(moduleId: string, versionId: string): Promise<void> {
 		const moduleInfo = this.#knownModules.get(moduleId)
 		if (!moduleInfo) throw new Error('Module not found when removing version')
 
-		switch (mode) {
-			case 'custom': {
-				delete moduleInfo.customVersions[versionId]
-
-				break
-			}
-			case 'release': {
-				delete moduleInfo.releaseVersions[versionId]
-
-				break
-			}
-			default:
-				this.#logger.info(`Unknown module type: ${mode}`)
-				return
-		}
+		delete moduleInfo.installedVersions[versionId]
 
 		// Notify clients
 		this.#emitModuleUpdate(moduleId)
 
 		// Ensure any modules using this version are started
-		await this.#instanceController.reloadUsesOfModule(moduleId, mode, versionId)
+		await this.#instanceController.reloadUsesOfModule(moduleId, 'release', versionId)
 	}
 
 	/**
@@ -197,7 +151,7 @@ export class InstanceModules {
 		for (const candidate of legacyCandidates) {
 			candidate.display.isLegacy = true
 			const moduleInfo = this.#getOrCreateModuleEntry(candidate.manifest.id)
-			moduleInfo.releaseVersions[candidate.display.version] = {
+			moduleInfo.installedVersions[candidate.display.version] = {
 				...candidate,
 				type: 'release',
 				releaseType: 'stable',
@@ -210,7 +164,7 @@ export class InstanceModules {
 		const bundledModules = await this.#moduleScanner.loadInfoForModulesInDir(this.#moduleDirs.bundledModulesDir, false)
 		for (const candidate of bundledModules) {
 			const moduleInfo = this.#getOrCreateModuleEntry(candidate.manifest.id)
-			moduleInfo.releaseVersions[candidate.display.version] = {
+			moduleInfo.installedVersions[candidate.display.version] = {
 				...candidate,
 				type: 'release',
 				releaseType: 'stable',
@@ -220,26 +174,15 @@ export class InstanceModules {
 		}
 
 		// And modules from the store
-		const storeModules = await this.#moduleScanner.loadInfoForModulesInDir(this.#moduleDirs.storeModulesDir, true)
+		const storeModules = await this.#moduleScanner.loadInfoForModulesInDir(this.#moduleDirs.installedModulesDir, true)
 		for (const candidate of storeModules) {
 			const moduleInfo = this.#getOrCreateModuleEntry(candidate.manifest.id)
-			moduleInfo.releaseVersions[candidate.display.version] = {
+			moduleInfo.installedVersions[candidate.display.version] = {
 				...candidate,
 				type: 'release',
 				releaseType: candidate.isPrerelease ? 'prerelease' : 'stable',
 				versionId: candidate.display.version,
 				isBuiltin: false,
-			}
-		}
-
-		// Search for custom modules
-		const customModules = await this.#moduleScanner.loadInfoForModulesInDir(this.#moduleDirs.customModulesDir, false)
-		for (const customModule of customModules) {
-			const moduleInfo = this.#getOrCreateModuleEntry(customModule.manifest.id)
-			moduleInfo.customVersions[customModule.display.version] = {
-				...customModule,
-				type: 'custom',
-				versionId: customModule.display.version,
 			}
 		}
 
@@ -286,14 +229,14 @@ export class InstanceModules {
 				)
 			}
 
-			for (const moduleVersion of Object.values(moduleInfo.releaseVersions)) {
+			for (const moduleVersion of Object.values(moduleInfo.installedVersions)) {
 				if (!moduleVersion) continue
 				this.#logger.info(
 					`${moduleVersion.display.id}@${moduleVersion.display.version}: ${moduleVersion.display.name}${moduleVersion.isBuiltin ? ' (Builtin)' : ''}`
 				)
 			}
 
-			for (const moduleVersion of Object.values(moduleInfo.releaseVersions)) {
+			for (const moduleVersion of Object.values(moduleInfo.installedVersions)) {
 				if (!moduleVersion) continue
 				this.#logger.info(
 					`${moduleVersion.display.id}@${moduleVersion.display.version}: ${moduleVersion.display.name} (Custom)`

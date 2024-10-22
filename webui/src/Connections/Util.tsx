@@ -11,9 +11,7 @@ export function getModuleVersionInfoForConnection(
 		case 'prerelease':
 			return moduleInfo?.prereleaseVersion
 		case 'specific-version':
-			return moduleInfo?.releaseVersions.find((v) => v.version.id === connection.moduleVersionId)
-		case 'custom':
-			return moduleInfo?.customVersions.find((v) => v.version.id === connection.moduleVersionId)
+			return moduleInfo?.installedVersions.find((v) => v.version.id === connection.moduleVersionId)
 		default:
 			return undefined
 	}

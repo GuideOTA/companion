@@ -87,8 +87,7 @@ export class InstanceController extends CoreBase<InstanceControllerEvents> {
 		const moduleDirs: ModuleDirs = {
 			bundledLegacyModulesDir: path.resolve(generatePath('modules')),
 			bundledModulesDir: path.resolve(generatePath('bundled-modules')),
-			storeModulesDir: path.join(registry.appInfo.modulesDir, 'store'),
-			customModulesDir: path.join(registry.appInfo.modulesDir, 'custom'),
+			installedModulesDir: path.join(registry.appInfo.modulesDir, 'store'),
 		}
 
 		this.definitions = new InstanceDefinitions(registry)
@@ -148,11 +147,7 @@ export class InstanceController extends CoreBase<InstanceControllerEvents> {
 		this.emit('connection_added')
 	}
 
-	async reloadUsesOfModule(
-		moduleId: string,
-		mode: 'release' | 'custom' | 'dev',
-		versionId: string | null
-	): Promise<void> {
+	async reloadUsesOfModule(moduleId: string, mode: 'release' | 'dev', versionId: string | null): Promise<void> {
 		// TODO - use the version!
 
 		// restart usages of this module

@@ -106,7 +106,7 @@ function AddConnectionEntry({ moduleInfo, addConnection, showHelp }: AddConnecti
 	const showVersion: NewClientModuleVersionInfo2 | undefined =
 		moduleInfo.installedInfo?.stableVersion ??
 		moduleInfo.installedInfo?.prereleaseVersion ??
-		moduleInfo.installedInfo?.releaseVersions?.[0]
+		moduleInfo.installedInfo?.installedVersions?.[0]
 	const showHelpClick = useCallback(
 		() => showVersion && showHelp(moduleInfo.id, showVersion),
 		[showHelp, moduleInfo.id, showVersion]

@@ -1,6 +1,6 @@
 import type { Operation as JsonPatchOperation } from 'fast-json-patch'
 
-export type ModuleVersionMode = 'stable' | 'prerelease' | 'specific-version' | 'custom'
+export type ModuleVersionMode = 'stable' | 'prerelease' | 'specific-version'
 export interface ModuleVersionInfo {
 	mode: ModuleVersionMode
 	id: string | null // Only used for 'specific-version' and 'custom
@@ -52,9 +52,7 @@ export interface NewClientModuleInfo {
 	stableVersion: NewClientModuleVersionInfo2Ext | null
 	prereleaseVersion: NewClientModuleVersionInfo2Ext | null
 
-	releaseVersions: NewClientModuleVersionInfo2[]
-
-	customVersions: NewClientModuleVersionInfo2[]
+	installedVersions: NewClientModuleVersionInfo2[]
 
 	// defaultVersion: Omit<NewClientModuleVersionInfo, 'type'>
 

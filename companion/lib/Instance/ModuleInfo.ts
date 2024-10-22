@@ -4,12 +4,7 @@ import type {
 	NewClientModuleVersionInfo2,
 	NewClientModuleVersionInfo2Ext,
 } from '@companion-app/shared/Model/ModuleInfo.js'
-import type {
-	CustomModuleVersionInfo,
-	DevModuleVersionInfo,
-	ReleaseModuleVersionInfo,
-	SomeModuleVersionInfo,
-} from './Types.js'
+import type { DevModuleVersionInfo, ReleaseModuleVersionInfo, SomeModuleVersionInfo } from './Types.js'
 import semver from 'semver'
 import { compact } from 'lodash-es'
 
@@ -23,8 +18,7 @@ export class InstanceModuleInfo {
 
 	devModule: DevModuleVersionInfo | null = null
 
-	releaseVersions: Record<string, ReleaseModuleVersionInfo | undefined> = {}
-	customVersions: Record<string, CustomModuleVersionInfo | undefined> = {}
+	installedVersions: Record<string, ReleaseModuleVersionInfo | undefined> = {}
 
 	constructor(id: string) {
 		this.id = id
@@ -36,7 +30,7 @@ export class InstanceModuleInfo {
 				if (this.devModule) return this.devModule
 
 				let latest: ReleaseModuleVersionInfo | null = null
-				for (const version of Object.values(this.releaseVersions)) {
+				for (const version of Object.values(this.installedVersions)) {
 					if (!version || version.releaseType !== 'stable') continue
 					if (!latest || semver.compare(version.display.version, latest.display.version) > 0) {
 						latest = version
@@ -49,7 +43,7 @@ export class InstanceModuleInfo {
 				if (this.devModule) return this.devModule
 
 				let latest: ReleaseModuleVersionInfo | null = null
-				for (const version of Object.values(this.releaseVersions)) {
+				for (const version of Object.values(this.installedVersions)) {
 					if (!version || version.releaseType !== 'prerelease') continue
 					if (!latest || semver.compare(version.display.version, latest.display.version) > 0) {
 						latest = version
@@ -59,9 +53,7 @@ export class InstanceModuleInfo {
 				return latest
 			}
 			case 'specific-version':
-				return versionId ? (this.releaseVersions[versionId] ?? null) : null
-			case 'custom':
-				return versionId ? (this.customVersions[versionId] ?? null) : null
+				return versionId ? (this.installedVersions[versionId] ?? null) : null
 			default:
 				return null
 		}
@@ -71,11 +63,7 @@ export class InstanceModuleInfo {
 		const stableVersion = this.getVersion('stable', null)
 		const prereleaseVersion = this.getVersion('prerelease', null)
 
-		const baseVersion =
-			stableVersion ??
-			prereleaseVersion ??
-			Object.values(this.releaseVersions)[0] ??
-			Object.values(this.customVersions)[0]
+		const baseVersion = stableVersion ?? prereleaseVersion ?? Object.values(this.installedVersions)[0]
 		if (!baseVersion) return null
 
 		return {
@@ -86,8 +74,7 @@ export class InstanceModuleInfo {
 			stableVersion: translateStableVersion(stableVersion),
 			prereleaseVersion: translatePrereleaseVersion(prereleaseVersion),
 
-			releaseVersions: compact(Object.values(this.releaseVersions)).map(translateReleaseVersion),
-			customVersions: compact(Object.values(this.customVersions)).map(translateCustomVersion),
+			installedVersions: compact(Object.values(this.installedVersions)).map(translateReleaseVersion),
 		}
 	}
 }
@@ -165,20 +152,6 @@ function translateReleaseVersion(version: ReleaseModuleVersionInfo): NewClientMo
 		hasHelp: version.helpPath !== null,
 		version: {
 			mode: 'specific-version',
-			id: version.versionId,
-		},
-	}
-}
-
-function translateCustomVersion(version: CustomModuleVersionInfo): NewClientModuleVersionInfo2 {
-	return {
-		displayName: `Custom XXX v${version.versionId}`,
-		isLegacy: false,
-		isDev: false,
-		isBuiltin: false,
-		hasHelp: version.helpPath !== null,
-		version: {
-			mode: 'custom',
 			id: version.versionId,
 		},
 	}

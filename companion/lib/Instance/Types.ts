@@ -4,8 +4,7 @@ import type { ModuleManifest } from '@companion-module/base'
 export interface ModuleDirs {
 	readonly bundledLegacyModulesDir: string
 	readonly bundledModulesDir: string
-	readonly customModulesDir: string
-	readonly storeModulesDir: string
+	readonly installedModulesDir: string
 }
 
 export interface ModuleVersionInfoBase {
@@ -27,8 +26,4 @@ export interface DevModuleVersionInfo extends ModuleVersionInfoBase {
 	type: 'dev'
 	isPackaged: boolean
 }
-export interface CustomModuleVersionInfo extends ModuleVersionInfoBase {
-	type: 'custom'
-	versionId: string
-}
-export type SomeModuleVersionInfo = ReleaseModuleVersionInfo | DevModuleVersionInfo | CustomModuleVersionInfo
+export type SomeModuleVersionInfo = ReleaseModuleVersionInfo | DevModuleVersionInfo

@@ -116,7 +116,8 @@ export const AddConnectionModal = observer(
 				break
 			case 'specific-version':
 				selectedVersionIsLegacy =
-					moduleInfo?.installedInfo?.releaseVersions.find((v) => v.version.id === selectedVersion.id)?.isLegacy ?? false
+					moduleInfo?.installedInfo?.installedVersions.find((v) => v.version.id === selectedVersion.id)?.isLegacy ??
+					false
 				break
 		}
 
@@ -274,11 +275,7 @@ export function getConnectionVersionSelectOptions(moduleInfo: NewClientModuleInf
 			label: moduleInfo.prereleaseVersion.displayName,
 		})
 
-	for (const version of moduleInfo.releaseVersions) {
-		choices.push({ value: JSON.stringify(version.version), label: version.displayName })
-	}
-
-	for (const version of moduleInfo.customVersions) {
+	for (const version of moduleInfo.installedVersions) {
 		choices.push({ value: JSON.stringify(version.version), label: version.displayName })
 	}
 

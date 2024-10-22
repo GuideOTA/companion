@@ -20,7 +20,6 @@ interface VisibleModulesState {
 	dev: boolean
 	builtin: boolean
 	store: boolean
-	custom: boolean
 }
 
 interface ModulesListProps {
@@ -46,7 +45,6 @@ export const ModulesList = observer(function ModulesList({
 		dev: true,
 		builtin: true,
 		store: true,
-		custom: true,
 	})
 
 	const [filter, setFilter] = useState('')
@@ -59,9 +57,8 @@ export const ModulesList = observer(function ModulesList({
 		for (const moduleInfo of searchResults) {
 			let isVisible = false
 			if (moduleInfo.hasDevVersion && visibleModules.visiblity.dev) isVisible = true
-			if (moduleInfo.customVersions.length && visibleModules.visiblity.custom) isVisible = true
 
-			const [hasBuiltin, hasStore] = moduleInfo.releaseVersions.reduce(
+			const [hasBuiltin, hasStore] = moduleInfo.installedVersions.reduce(
 				([builtin, release], v) => {
 					if (v.isBuiltin) return [true, release]
 					if (!v.isBuiltin) return [builtin, true]
@@ -133,7 +130,6 @@ export const ModulesList = observer(function ModulesList({
 								<VisibilityButton {...visibleModules} keyId="dev" color="secondary" label="Dev" />
 								<VisibilityButton {...visibleModules} keyId="builtin" color="success" label="Builtin" />
 								<VisibilityButton {...visibleModules} keyId="store" color="warning" label="Store" />
-								<VisibilityButton {...visibleModules} keyId="custom" color="danger" label="Custom" />
 							</CButtonGroup>
 						</th>
 					</tr>
@@ -208,7 +204,7 @@ const ModulesListRow = observer(function ModulesListRow({
 			<td onClick={doEdit} className="hand">
 				{moduleInfo.baseInfo.name ?? ''}
 
-				{/* {moduleInfo.releaseVersions.?.isLegacy && (
+				{/* {moduleInfo.installedVersions.?.isLegacy && (
 					<>
 						<FontAwesomeIcon
 							icon={faExclamationTriangle}

@@ -40,27 +40,20 @@ export class InstanceInstalledModulesManager {
 	/**
 	 * Absolute path for storing store modules on disk
 	 */
-	readonly #storeModulesDir: string
-
-	/**
-	 * Absolute path for storing custom modules on disk
-	 */
-	readonly #customModulesDir: string
+	readonly #modulesDir: string
 
 	constructor(appInfo: AppInfo, modulesManager: InstanceModules, modulesStore: ModuleStoreService, dirs: ModuleDirs) {
 		this.#appInfo = appInfo
 		this.#modulesManager = modulesManager
 		this.#modulesStore = modulesStore
-		this.#storeModulesDir = dirs.storeModulesDir
-		this.#customModulesDir = dirs.customModulesDir
+		this.#modulesDir = dirs.installedModulesDir
 	}
 
 	/**
 	 * Initialise the user modules manager
 	 */
 	async init() {
-		await fs.mkdirp(this.#storeModulesDir)
-		await fs.mkdirp(this.#customModulesDir)
+		await fs.mkdirp(this.#modulesDir)
 	}
 
 	/**
@@ -88,17 +81,17 @@ export class InstanceInstalledModulesManager {
 				return "Doesn't look like a valid module, missing manifest"
 			}
 
-			const moduleDir = path.join(this.#customModulesDir, `${manifestJson.id}-${manifestJson.version}`)
+			const moduleDir = path.join(this.#modulesDir, `${manifestJson.id}-${manifestJson.version}`)
 			if (fs.existsSync(moduleDir)) {
 				this.#logger.warn(`Module ${manifestJson.id} v${manifestJson.version} already exists on disk`)
 				return `Module ${manifestJson.id} v${manifestJson.version} already exists`
 			}
 
-			return this.#installModuleFromTarBuffer('custom', moduleDir, manifestJson, decompressedData, false)
+			return this.#installModuleFromTarBuffer(moduleDir, manifestJson, decompressedData, false)
 		})
 
 		client.onPromise('modules:uninstall-custom-module', async (moduleId, versionId) => {
-			return this.#uninstallModule('custom', this.#customModulesDir, moduleId, versionId)
+			return this.#uninstallModule(moduleId, versionId)
 		})
 
 		client.onPromise('modules:install-store-module', async (moduleId, moduleVersion) => {
@@ -128,7 +121,7 @@ export class InstanceInstalledModulesManager {
 		})
 
 		client.onPromise('modules:uninstall-store-module', async (moduleId, versionId) => {
-			return this.#uninstallModule('release', this.#storeModulesDir, moduleId, versionId)
+			return this.#uninstallModule(moduleId, versionId)
 		})
 	}
 
@@ -138,7 +131,7 @@ export class InstanceInstalledModulesManager {
 	): Promise<string | null> {
 		const moduleVersion = versionInfo.id
 
-		const moduleDir = path.join(this.#storeModulesDir, `${moduleId}-${moduleVersion}`)
+		const moduleDir = path.join(this.#modulesDir, `${moduleId}-${moduleVersion}`)
 		if (fs.existsSync(moduleDir)) {
 			this.#logger.warn(`Module ${moduleId} v${moduleVersion} already exists on disk`)
 			return `Module ${moduleId} v${moduleVersion} already exists`
@@ -199,17 +192,10 @@ export class InstanceInstalledModulesManager {
 			return 'Module manifest does not match requested module'
 		}
 
-		return this.#installModuleFromTarBuffer(
-			'release',
-			moduleDir,
-			manifestJson,
-			decompressedData,
-			versionInfo.isPrerelease
-		)
+		return this.#installModuleFromTarBuffer(moduleDir, manifestJson, decompressedData, versionInfo.isPrerelease)
 	}
 
 	async #installModuleFromTarBuffer(
-		type: 'release' | 'custom',
 		moduleDir: string,
 		manifestJson: ModuleManifest,
 		uncompressedData: Buffer,
@@ -237,25 +223,20 @@ export class InstanceInstalledModulesManager {
 		this.#logger.info(`Installed module ${manifestJson.id} v${manifestJson.version}`)
 
 		// Let other interested parties know that a module has been installed
-		await this.#modulesManager.loadInstalledModule(moduleDir, type, manifestJson)
+		await this.#modulesManager.loadInstalledModule(moduleDir, manifestJson)
 
 		return null
 	}
 
-	async #uninstallModule(
-		type: 'release' | 'custom',
-		modulesDir: string,
-		moduleId: string,
-		versionId: string
-	): Promise<string | null> {
-		this.#logger.info(`Uninstalling ${type} ${moduleId} v${versionId}`)
+	async #uninstallModule(moduleId: string, versionId: string): Promise<string | null> {
+		this.#logger.info(`Uninstalling ${moduleId} v${versionId}`)
 
 		try {
-			const moduleDir = path.join(modulesDir, `${moduleId}-${versionId}`)
+			const moduleDir = path.join(this.#modulesDir, `${moduleId}-${versionId}`)
 			if (!fs.existsSync(moduleDir)) return `Module ${moduleId} v${versionId} doesn't exist`
 
 			// Stop any usages of the module
-			await this.#modulesManager.uninstallModule(moduleId, type, versionId)
+			await this.#modulesManager.uninstallModule(moduleId, versionId)
 
 			// Delete the module code
 			await fs.rm(moduleDir, { recursive: true }).catch(() => null)
